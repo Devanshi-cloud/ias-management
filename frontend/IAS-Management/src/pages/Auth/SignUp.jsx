@@ -1,219 +1,298 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { FiUser, FiMail, FiLock, FiEye, FiEyeOff, FiKey } from "react-icons/fi";
-import toast, { Toaster } from "react-hot-toast";
-import axiosInstance from "../../utils/axiosInstance";
-import { AUTH_ENDPOINTS } from "../../utils/apiPaths";
-import { isValidEmail } from "../../utils/helper";
+"use client"
+
+import { useState } from "react"
+import { Link, useNavigate } from "react-router-dom"
+import { useAuth } from "../../context/AuthContext"
+import { UserPlus, Upload } from "lucide-react"
+import axiosInstance from "../../utils/axiosInstance"
+import { API_PATHS } from "../../utils/apiPaths"
 
 const SignUp = () => {
-  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
     confirmPassword: "",
+    birthday: "",
+    iasPosition: "",
     adminInviteToken: "",
-  });
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
+  })
+  const [profileImage, setProfileImage] = useState(null)
+  const [imagePreview, setImagePreview] = useState(null)
+  const [error, setError] = useState("")
+  const [loading, setLoading] = useState(false)
+
+  const { register } = useAuth()
+  const navigate = useNavigate()
+
+  const iasPositions = [
+    "COMMUNICATION",
+    "FINANCE",
+    "DESIGN AND MEDIA",
+    "TECH",
+    "HOSPITALITY",
+    "Other"
+  ]
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+    setFormData({ ...formData, [e.target.name]: e.target.value })
+  }
 
-  const validateForm = () => {
-    if (!formData.name.trim()) {
-      toast.error("Name is required");
-      return false;
+  const handleImageChange = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        setError("Image size should be less than 5MB")
+        return
+      }
+      setProfileImage(file)
+      setImagePreview(URL.createObjectURL(file))
+      setError("")
     }
-    if (!formData.email || !isValidEmail(formData.email)) {
-      toast.error("Please enter a valid email");
-      return false;
+  }
+
+  const uploadProfileImage = async () => {
+    if (!profileImage) return null
+
+    try {
+      const formData = new FormData()
+      formData.append("image", profileImage)
+
+      const response = await axiosInstance.post(API_PATHS.UPLOAD_IMAGE, formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      })
+
+      return response.data.imageUrl
+    } catch (err) {
+      console.error("Error uploading image:", err)
+      throw new Error("Failed to upload profile picture")
     }
-    if (formData.password.length < 6) {
-      toast.error("Password must be at least 6 characters");
-      return false;
-    }
-    if (formData.password !== formData.confirmPassword) {
-      toast.error("Passwords do not match");
-      return false;
-    }
-    return true;
-  };
+  }
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    e.preventDefault()
+    setError("")
 
-    if (!validateForm()) return;
-
-    setLoading(true);
-    try {
-      const { confirmPassword, ...dataToSend } = formData;
-      
-      const response = await axiosInstance.post(AUTH_ENDPOINTS.REGISTER, dataToSend);
-      
-      const { token, role, ...userData } = response.data;
-      
-      // Store token and user data
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify({ ...userData, role }));
-      
-      toast.success("Account created successfully!");
-      
-      // Redirect based on role
-      setTimeout(() => {
-        if (role === "admin") {
-          navigate("/admin/dashboard");
-        } else {
-          navigate("/user/dashboard");
-        }
-      }, 1000);
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Registration failed");
-    } finally {
-      setLoading(false);
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match")
+      return
     }
-  };
+
+    if (formData.password.length < 6) {
+      setError("Password must be at least 6 characters")
+      return
+    }
+
+    setLoading(true)
+
+    try {
+      let profileImageUrl = null
+      if (profileImage) {
+        profileImageUrl = await uploadProfileImage()
+      }
+
+      const userData = {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        birthday: formData.birthday || null,
+        iasPosition: formData.iasPosition || null,
+        profileImageUrl,
+        adminInviteToken: formData.adminInviteToken || undefined,
+      }
+
+      const newUser = await register(userData)
+
+      if (newUser.role === "admin") {
+        navigate("/admin/dashboard")
+      } else {
+        navigate("/user/dashboard")
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || "Registration failed. Please try again.")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4 py-8">
-      <Toaster position="top-right" />
-      
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">
+    <div className="auth-container">
+      <div className="auth-card" style={{ maxWidth: "500px" }}>
+        <div style={{ textAlign: "center", marginBottom: "2rem" }}>
+          <UserPlus size={48} style={{ color: "var(--primary)", margin: "0 auto" }} />
+          <h1 style={{ fontSize: "1.875rem", fontWeight: "700", marginTop: "1rem", color: "var(--text)" }}>
             Create Account
           </h1>
-          <p className="text-gray-600">Join us today</p>
+          <p style={{ color: "var(--text-light)", marginTop: "0.5rem" }}>Sign up to get started</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Name Input */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Full Name
-            </label>
-            <div className="relative">
-              <FiUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                placeholder="Enter your name"
-              />
-            </div>
-          </div>
-
-          {/* Email Input */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Email Address
-            </label>
-            <div className="relative">
-              <FiMail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                placeholder="Enter your email"
-              />
-            </div>
-          </div>
-
-          {/* Password Input */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Password
-            </label>
-            <div className="relative">
-              <FiLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input
-                type={showPassword ? "text" : "password"}
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                placeholder="Create password"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+        <form onSubmit={handleSubmit}>
+          {/* Profile Picture Upload */}
+          <div className="form-group" style={{ textAlign: "center" }}>
+            <label style={{ display: "block", marginBottom: "1rem" }}>Profile Picture (Optional)</label>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem" }}>
+              {imagePreview ? (
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  style={{ width: "100px", height: "100px", borderRadius: "50%", objectFit: "cover" }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: "100px",
+                    height: "100px",
+                    borderRadius: "50%",
+                    backgroundColor: "var(--background)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    border: "2px dashed var(--border)"
+                  }}
+                >
+                  <Upload size={32} style={{ color: "var(--text-light)" }} />
+                </div>
+              )}
+              <label
+                htmlFor="profileImage"
+                className="btn btn-secondary"
+                style={{ cursor: "pointer", display: "inline-block" }}
               >
-                {showPassword ? <FiEyeOff /> : <FiEye />}
-              </button>
-            </div>
-          </div>
-
-          {/* Confirm Password Input */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Confirm Password
-            </label>
-            <div className="relative">
-              <FiLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                Choose Image
+              </label>
               <input
-                type={showConfirmPassword ? "text" : "password"}
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                placeholder="Confirm password"
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
-              </button>
-            </div>
-          </div>
-
-          {/* Admin Token (Optional) */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Admin Invite Token <span className="text-gray-500">(Optional)</span>
-            </label>
-            <div className="relative">
-              <FiKey className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                name="adminInviteToken"
-                value={formData.adminInviteToken}
-                onChange={handleChange}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                placeholder="Enter admin token"
+                type="file"
+                id="profileImage"
+                accept="image/*"
+                onChange={handleImageChange}
+                style={{ display: "none" }}
               />
             </div>
           </div>
 
-          {/* Submit Button */}
+          <div className="form-group">
+            <label htmlFor="name">Full Name *</label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              className="input"
+              value={formData.name}
+              onChange={handleChange}
+              required
+              placeholder="Enter your full name"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="email">Email *</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              className="input"
+              value={formData.email}
+              onChange={handleChange}
+              required
+              placeholder="Enter your email"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="birthday">Birthday (Optional)</label>
+            <input
+              type="date"
+              id="birthday"
+              name="birthday"
+              className="input"
+              value={formData.birthday}
+              onChange={handleChange}
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="iasPosition">IAS Position (Optional)</label>
+            <select
+              id="iasPosition"
+              name="iasPosition"
+              className="input"
+              value={formData.iasPosition}
+              onChange={handleChange}
+            >
+              <option value="">Select Position</option>
+              {iasPositions.map((position) => (
+                <option key={position} value={position}>
+                  {position}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="password">Password *</label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              className="input"
+              value={formData.password}
+              onChange={handleChange}
+              required
+              placeholder="Enter your password"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="confirmPassword">Confirm Password *</label>
+            <input
+              type="password"
+              id="confirmPassword"
+              name="confirmPassword"
+              className="input"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              required
+              placeholder="Confirm your password"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="adminInviteToken">Admin Invite Token (Optional)</label>
+            <input
+              type="text"
+              id="adminInviteToken"
+              name="adminInviteToken"
+              className="input"
+              value={formData.adminInviteToken}
+              onChange={handleChange}
+              placeholder="Enter admin token if you have one"
+            />
+            <small style={{ color: "var(--text-light)", fontSize: "0.75rem" }}>
+              Leave blank to register as a regular user
+            </small>
+          </div>
+
+          {error && <div className="error-message">{error}</div>}
+
           <button
             type="submit"
+            className="btn btn-primary"
+            style={{ width: "100%", marginTop: "1rem" }}
             disabled={loading}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition disabled:bg-blue-400 disabled:cursor-not-allowed mt-6"
           >
-            {loading ? "Creating Account..." : "Sign Up"}
+            {loading ? "Creating account..." : "Sign Up"}
           </button>
         </form>
 
-        {/* Login Link */}
-        <p className="mt-6 text-center text-gray-600">
+        <p style={{ textAlign: "center", marginTop: "1.5rem", color: "var(--text-light)" }}>
           Already have an account?{" "}
-          <Link to="/login" className="text-blue-600 hover:text-blue-700 font-semibold">
-            Sign In
+          <Link to="/login" style={{ color: "var(--primary)", fontWeight: "600" }}>
+            Sign in
           </Link>
         </p>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default SignUp;
+export default SignUp

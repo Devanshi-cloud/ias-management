@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom"
 import Navbar from "../../components/Navbar"
 import axiosInstance from "../../utils/axiosInstance"
 import { API_PATHS } from "../../utils/apiPaths"
-import { PlusCircle, Trash2 } from "lucide-react"
+import { PlusCircle, Trash2, X } from "lucide-react"
 import { priorityOptions } from "../../utils/data"
 
 const CreateTask = () => {
@@ -19,6 +19,7 @@ const CreateTask = () => {
     attachments: "",
     todoChecklist: [],
   })
+  const [selectedUsers, setSelectedUsers] = useState([])
   const [newTodo, setNewTodo] = useState("")
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
@@ -44,9 +45,25 @@ const CreateTask = () => {
     setFormData({ ...formData, [name]: value })
   }
 
-  const handleUserSelect = (e) => {
-    const selectedOptions = Array.from(e.target.selectedOptions, (option) => option.value)
-    setFormData({ ...formData, assignedTo: selectedOptions })
+  const handleUserToggle = (userId) => {
+    const isSelected = selectedUsers.some(u => u._id === userId)
+    let newSelectedUsers
+
+    if (isSelected) {
+      newSelectedUsers = selectedUsers.filter(u => u._id !== userId)
+    } else {
+      const user = users.find(u => u._id === userId)
+      newSelectedUsers = [...selectedUsers, user]
+    }
+
+    setSelectedUsers(newSelectedUsers)
+    setFormData({ ...formData, assignedTo: newSelectedUsers.map(u => u._id) })
+  }
+
+  const removeUser = (userId) => {
+    const newSelectedUsers = selectedUsers.filter(u => u._id !== userId)
+    setSelectedUsers(newSelectedUsers)
+    setFormData({ ...formData, assignedTo: newSelectedUsers.map(u => u._id) })
   }
 
   const addTodoItem = () => {
@@ -161,25 +178,126 @@ const CreateTask = () => {
             </div>
 
             <div className="form-group">
-              <label htmlFor="assignedTo">Assign To *</label>
-              <select
-                id="assignedTo"
-                name="assignedTo"
-                className="input"
-                multiple
-                value={formData.assignedTo}
-                onChange={handleUserSelect}
-                required
-                style={{ minHeight: "120px" }}
-              >
-                {users.map((user) => (
-                  <option key={user._id} value={user._id}>
-                    {user.name} ({user.email})
-                  </option>
-                ))}
-              </select>
-              <small style={{ color: "var(--text-light)", fontSize: "0.75rem" }}>
-                Hold Ctrl/Cmd to select multiple users
+              <label>Assign To * (Select multiple users)</label>
+              
+              {/* Selected Users Display */}
+              {selectedUsers.length > 0 && (
+                <div style={{ 
+                  display: "flex", 
+                  flexWrap: "wrap", 
+                  gap: "0.5rem", 
+                  marginBottom: "1rem",
+                  padding: "0.75rem",
+                  backgroundColor: "var(--background)",
+                  borderRadius: "0.375rem"
+                }}>
+                  {selectedUsers.map((user) => (
+                    <div
+                      key={user._id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                        padding: "0.375rem 0.75rem",
+                        backgroundColor: "var(--primary)",
+                        color: "white",
+                        borderRadius: "9999px",
+                        fontSize: "0.875rem"
+                      }}
+                    >
+                      <span>{user.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeUser(user._id)}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "white",
+                          cursor: "pointer",
+                          padding: "0",
+                          display: "flex",
+                          alignItems: "center"
+                        }}
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* User Selection List */}
+              <div style={{
+                maxHeight: "200px",
+                overflowY: "auto",
+                border: "1px solid var(--border)",
+                borderRadius: "0.375rem",
+                padding: "0.5rem"
+              }}>
+                {users.map((user) => {
+                  const isSelected = selectedUsers.some(u => u._id === user._id)
+                  return (
+                    <label
+                      key={user._id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.75rem",
+                        padding: "0.75rem",
+                        cursor: "pointer",
+                        borderRadius: "0.375rem",
+                        backgroundColor: isSelected ? "var(--background)" : "transparent",
+                        transition: "background-color 0.2s"
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isSelected) e.currentTarget.style.backgroundColor = "var(--background)"
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isSelected) e.currentTarget.style.backgroundColor = "transparent"
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => handleUserToggle(user._id)}
+                        style={{ cursor: "pointer" }}
+                      />
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flex: 1 }}>
+                        {user.profileImageUrl ? (
+                          <img
+                            src={user.profileImageUrl}
+                            alt={user.name}
+                            style={{ width: "32px", height: "32px", borderRadius: "50%", objectFit: "cover" }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: "32px",
+                              height: "32px",
+                              borderRadius: "50%",
+                              backgroundColor: "var(--primary)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              color: "white",
+                              fontSize: "0.875rem",
+                              fontWeight: "600"
+                            }}
+                          >
+                            {user.name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <div>
+                          <div style={{ fontWeight: "500" }}>{user.name}</div>
+                          <div style={{ fontSize: "0.75rem", color: "var(--text-light)" }}>{user.email}</div>
+                        </div>
+                      </div>
+                    </label>
+                  )
+                })}
+              </div>
+              <small style={{ color: "var(--text-light)", fontSize: "0.75rem", marginTop: "0.5rem", display: "block" }}>
+                Select one or more users to assign this task
               </small>
             </div>
 

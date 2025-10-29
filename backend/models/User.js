@@ -3,20 +3,30 @@ const mongoose = require("mongoose");
 const UserSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
-
     email: { type: String, required: true, unique: true },
-
     password: { type: String, required: true },
-
     profileImageUrl: { type: String, default: null },
-
+    
+    // New fields for birthday and IAS position
+    birthday: { type: Date, default: null },
+    iasPosition: { 
+      type: String, 
+      enum: ["COMMUNICATION",
+    "FINANCE",
+    "DESIGN AND MEDIA",
+    "TECH",
+    "HOSPITALITY",
+    "Other", null],
+      default: null 
+    },
+    
     role: {
       type: String,
-      enum: ["admin", "member"], // Only allow these roles
+      enum: ["admin", "member"],
       default: "member",
     },
   },
-  { timestamps: true } // adds createdAt & updatedAt automatically
+  { timestamps: true }
 );
 
 module.exports = mongoose.model("User", UserSchema);

@@ -1,16 +1,31 @@
 "use client"
 import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
-import { LogOut, User, LayoutDashboard, ListTodo, Users, PlusCircle } from "lucide-react"
+import { LogOut, User, LayoutDashboard, ListTodo, Users, PlusCircle, UserCircle } from "lucide-react"
+import { useState, useRef, useEffect } from "react"
 
 const Navbar = () => {
   const { user, logout, isAdmin } = useAuth()
   const navigate = useNavigate()
+  const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const menuRef = useRef(null)
 
   const handleLogout = () => {
     logout()
     navigate("/login")
   }
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setShowProfileMenu(false)
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
 
   return (
     <nav className="navbar">
@@ -56,19 +71,129 @@ const Navbar = () => {
           </>
         )}
 
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-          <span style={{ color: "var(--text-light)", fontSize: "0.875rem" }}>
-            <User size={16} style={{ display: "inline", marginRight: "0.25rem" }} />
-            {user?.name}
-          </span>
+        <div style={{ position: "relative" }} ref={menuRef}>
           <button
-            onClick={handleLogout}
-            className="btn btn-secondary"
-            style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+            onClick={() => setShowProfileMenu(!showProfileMenu)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: "0.5rem",
+              borderRadius: "0.375rem",
+              transition: "background-color 0.2s",
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(0,0,0,0.05)"}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
           >
-            <LogOut size={16} />
-            Logout
+            {user?.profileImageUrl ? (
+              <img
+                src={user.profileImageUrl}
+                alt={user.name}
+                style={{
+                  width: "32px",
+                  height: "32px",
+                  borderRadius: "50%",
+                  objectFit: "cover",
+                  border: "2px solid var(--primary)"
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: "32px",
+                  height: "32px",
+                  borderRadius: "50%",
+                  backgroundColor: "var(--primary)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "white",
+                  fontSize: "0.875rem",
+                  fontWeight: "600"
+                }}
+              >
+                {user?.name?.charAt(0).toUpperCase()}
+              </div>
+            )}
+            <span style={{ color: "var(--text)", fontSize: "0.875rem", fontWeight: "500" }}>
+              {user?.name}
+            </span>
           </button>
+
+          {showProfileMenu && (
+            <div
+              style={{
+                position: "absolute",
+                top: "100%",
+                right: 0,
+                marginTop: "0.5rem",
+                backgroundColor: "white",
+                borderRadius: "0.5rem",
+                boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+                minWidth: "200px",
+                zIndex: 1000,
+                overflow: "hidden",
+              }}
+            >
+              <div style={{ padding: "0.75rem 1rem", borderBottom: "1px solid var(--border)" }}>
+                <p style={{ fontSize: "0.875rem", fontWeight: "600", color: "var(--text)" }}>
+                  {user?.name}
+                </p>
+                <p style={{ fontSize: "0.75rem", color: "var(--text-light)" }}>
+                  {user?.email}
+                </p>
+              </div>
+
+              <Link
+                to={isAdmin ? "/admin/profile" : "/user/profile"}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  padding: "0.75rem 1rem",
+                  textDecoration: "none",
+                  color: "var(--text)",
+                  transition: "background-color 0.2s",
+                }}
+                onClick={() => setShowProfileMenu(false)}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "var(--background)"}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+              >
+                <UserCircle size={16} />
+                <span style={{ fontSize: "0.875rem" }}>My Profile</span>
+              </Link>
+
+              <button
+                onClick={() => {
+                  setShowProfileMenu(false)
+                  handleLogout()
+                }}
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  padding: "0.75rem 1rem",
+                  textAlign: "left",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "var(--danger)",
+                  fontSize: "0.875rem",
+                  transition: "background-color 0.2s",
+                  borderTop: "1px solid var(--border)",
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "var(--background)"}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+              >
+                <LogOut size={16} />
+                Logout
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </nav>

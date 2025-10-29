@@ -4,7 +4,8 @@ import { useState, useEffect } from "react"
 import Navbar from "../../components/Navbar"
 import axiosInstance from "../../utils/axiosInstance"
 import { API_PATHS } from "../../utils/apiPaths"
-import { Download, User } from "lucide-react"
+import { Download, User, Calendar } from "lucide-react"
+import { formatDate } from "../../utils/helper"
 
 const ManageUsers = () => {
   const [users, setUsers] = useState([])
@@ -76,6 +77,8 @@ const ManageUsers = () => {
               <tr>
                 <th>User</th>
                 <th>Email</th>
+                <th>Birthday</th>
+                <th>IAS Position</th>
                 <th>Pending Tasks</th>
                 <th>In Progress</th>
                 <th>Completed</th>
@@ -90,7 +93,7 @@ const ManageUsers = () => {
                       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
                         {user.profileImageUrl ? (
                           <img
-                            src={user.profileImageUrl || "/placeholder.svg"}
+                            src={user.profileImageUrl}
                             alt={user.name}
                             style={{ width: "40px", height: "40px", borderRadius: "50%", objectFit: "cover" }}
                           />
@@ -115,6 +118,23 @@ const ManageUsers = () => {
                     </td>
                     <td>{user.email}</td>
                     <td>
+                      {user.birthday ? (
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "var(--text-light)" }}>
+                          <Calendar size={14} />
+                          <span>{formatDate(user.birthday)}</span>
+                        </div>
+                      ) : (
+                        <span style={{ color: "var(--text-light)", fontSize: "0.875rem" }}>Not provided</span>
+                      )}
+                    </td>
+                    <td>
+                      {user.iasPosition ? (
+                        <span className="badge badge-low">{user.iasPosition}</span>
+                      ) : (
+                        <span style={{ color: "var(--text-light)", fontSize: "0.875rem" }}>Not set</span>
+                      )}
+                    </td>
+                    <td>
                       <span className="badge badge-pending">{user.pendingTasks || 0}</span>
                     </td>
                     <td>
@@ -130,7 +150,7 @@ const ManageUsers = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="6" style={{ textAlign: "center", padding: "2rem" }}>
+                  <td colSpan="8" style={{ textAlign: "center", padding: "2rem" }}>
                     No users found
                   </td>
                 </tr>

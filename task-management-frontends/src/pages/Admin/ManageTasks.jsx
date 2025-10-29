@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom"
 import Navbar from "../../components/Navbar"
 import axiosInstance from "../../utils/axiosInstance"
 import { API_PATHS } from "../../utils/apiPaths"
-import { Edit, Trash2, Download, Eye } from "lucide-react"
+import { Edit, Trash2, Download, Eye, Users as UsersIcon } from "lucide-react"
 import { formatDate, getPriorityColor, getStatusColor } from "../../utils/helper"
 import { filterOptions } from "../../utils/data"
 
@@ -78,6 +78,102 @@ const ManageTasks = () => {
     setShowModal(true)
   }
 
+  const renderAssignedUsers = (assignedTo) => {
+    if (!assignedTo || assignedTo.length === 0) {
+      return <span style={{ color: "var(--text-light)", fontSize: "0.875rem" }}>Unassigned</span>
+    }
+
+    // Handle both array and single object cases
+    const users = Array.isArray(assignedTo) ? assignedTo : [assignedTo]
+
+    if (users.length === 1) {
+      const user = users[0]
+      return (
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          {user.profileImageUrl ? (
+            <img
+              src={user.profileImageUrl}
+              alt={user.name}
+              style={{ width: "24px", height: "24px", borderRadius: "50%", objectFit: "cover" }}
+            />
+          ) : (
+            <div
+              style={{
+                width: "24px",
+                height: "24px",
+                borderRadius: "50%",
+                backgroundColor: "var(--primary)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "white",
+                fontSize: "0.75rem",
+                fontWeight: "600"
+              }}
+            >
+              {user.name.charAt(0).toUpperCase()}
+            </div>
+          )}
+          <span>{user.name}</span>
+        </div>
+      )
+    }
+
+    // Multiple users - show avatars stacked
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+        <div style={{ display: "flex", marginLeft: "0" }}>
+          {users.slice(0, 3).map((user, index) => (
+            user.profileImageUrl ? (
+              <img
+                key={user._id}
+                src={user.profileImageUrl}
+                alt={user.name}
+                title={user.name}
+                style={{
+                  width: "24px",
+                  height: "24px",
+                  borderRadius: "50%",
+                  objectFit: "cover",
+                  marginLeft: index > 0 ? "-8px" : "0",
+                  border: "2px solid white",
+                  position: "relative",
+                  zIndex: users.length - index
+                }}
+              />
+            ) : (
+              <div
+                key={user._id}
+                title={user.name}
+                style={{
+                  width: "24px",
+                  height: "24px",
+                  borderRadius: "50%",
+                  backgroundColor: "var(--primary)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "white",
+                  fontSize: "0.75rem",
+                  fontWeight: "600",
+                  marginLeft: index > 0 ? "-8px" : "0",
+                  border: "2px solid white",
+                  position: "relative",
+                  zIndex: users.length - index
+                }}
+              >
+                {user.name.charAt(0).toUpperCase()}
+              </div>
+            )
+          ))}
+        </div>
+        <span style={{ fontSize: "0.875rem" }}>
+          {users.length > 3 ? `${users.length} users` : users.map(u => u.name.split(' ')[0]).join(', ')}
+        </span>
+      </div>
+    )
+  }
+
   if (loading) {
     return (
       <>
@@ -147,22 +243,7 @@ const ManageTasks = () => {
                 filteredTasks.map((task) => (
                   <tr key={task._id}>
                     <td style={{ fontWeight: "600" }}>{task.title}</td>
-                    <td>
-                      {task.assignedTo ? (
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                          {task.assignedTo.profileImageUrl && (
-                            <img
-                              src={task.assignedTo.profileImageUrl || "/placeholder.svg"}
-                              alt={task.assignedTo.name}
-                              style={{ width: "24px", height: "24px", borderRadius: "50%" }}
-                            />
-                          )}
-                          <span>{task.assignedTo.name}</span>
-                        </div>
-                      ) : (
-                        "Unassigned"
-                      )}
-                    </td>
+                    <td>{renderAssignedUsers(task.assignedTo)}</td>
                     <td>
                       <span className={`badge ${getPriorityColor(task.priority)}`}>{task.priority}</span>
                     </td>
@@ -243,6 +324,47 @@ const ManageTasks = () => {
               <p style={{ marginTop: "0.5rem", color: "var(--text-light)" }}>
                 {selectedTask.description || "No description"}
               </p>
+            </div>
+
+            <div style={{ marginBottom: "1rem" }}>
+              <strong>Assigned To:</strong>
+              <div style={{ marginTop: "0.5rem" }}>
+                {selectedTask.assignedTo && selectedTask.assignedTo.length > 0 ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                    {(Array.isArray(selectedTask.assignedTo) ? selectedTask.assignedTo : [selectedTask.assignedTo]).map((user) => (
+                      <div key={user._id} style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        {user.profileImageUrl ? (
+                          <img
+                            src={user.profileImageUrl}
+                            alt={user.name}
+                            style={{ width: "32px", height: "32px", borderRadius: "50%", objectFit: "cover" }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: "32px",
+                              height: "32px",
+                              borderRadius: "50%",
+                              backgroundColor: "var(--primary)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              color: "white",
+                              fontSize: "0.875rem",
+                              fontWeight: "600"
+                            }}
+                          >
+                            {user.name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <span>{user.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <span style={{ color: "var(--text-light)" }}>Unassigned</span>
+                )}
+              </div>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>

@@ -11,12 +11,13 @@ import AdminDashboard from "./pages/Admin/Dashboard"
 import CreateTask from "./pages/Admin/CreateTask"
 import ManageTasks from "./pages/Admin/ManageTasks"
 import ManageUsers from "./pages/Admin/ManageUsers"
-import EditTask from "./pages/Admin/EditTask" // Import the EditTask component
+import EditTask from "./pages/Admin/EditTask"
 
 // User Pages
 import UserDashboard from "./pages/User/UserDashboard"
 import MyTasks from "./pages/User/MyTasks"
 import ViewTaskDetail from "./pages/User/ViewTaskDetail"
+import UserProfile from "./pages/User/UserProfile"
 
 import "./App.css"
 
@@ -62,11 +63,19 @@ function App() {
               </PrivateRoute>
             }
           />
-          <Route // Add this new route for editing tasks
+          <Route
             path="/admin/edit-task/:id"
             element={
               <PrivateRoute role="admin">
                 <EditTask />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/profile"
+            element={
+              <PrivateRoute role="admin">
+                <UserProfile />
               </PrivateRoute>
             }
           />
@@ -93,6 +102,14 @@ function App() {
             element={
               <PrivateRoute role="member">
                 <ViewTaskDetail />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/user/profile"
+            element={
+              <PrivateRoute role="member">
+                <UserProfile />
               </PrivateRoute>
             }
           />

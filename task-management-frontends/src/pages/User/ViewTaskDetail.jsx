@@ -5,7 +5,7 @@ import { useParams, useNavigate } from "react-router-dom"
 import Navbar from "../../components/Navbar"
 import axiosInstance from "../../utils/axiosInstance"
 import { API_PATHS } from "../../utils/apiPaths"
-import { ArrowLeft, Calendar, User, CheckCircle2, Circle } from "lucide-react"
+import { ArrowLeft, Calendar, User, CheckCircle2, Circle, Users as UsersIcon } from "lucide-react"
 import { formatDate, getPriorityColor, isOverdue } from "../../utils/helper"
 import { statusOptions } from "../../utils/data"
 
@@ -85,6 +85,7 @@ const ViewTaskDetail = () => {
   }
 
   const overdue = isOverdue(task.dueDate, task.status)
+  const assignedUsers = task.assignedTo ? (Array.isArray(task.assignedTo) ? task.assignedTo : [task.assignedTo]) : []
 
   return (
     <>
@@ -169,11 +170,44 @@ const ViewTaskDetail = () => {
             </div>
 
             <div>
-              <h4 style={{ fontSize: "0.875rem", color: "var(--text-light)", marginBottom: "0.5rem" }}>Assigned To</h4>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <User size={16} />
-                <span>{task.assignedTo?.name || "Unassigned"}</span>
-              </div>
+              <h4 style={{ fontSize: "0.875rem", color: "var(--text-light)", marginBottom: "0.5rem" }}>
+                Assigned To {assignedUsers.length > 1 && `(${assignedUsers.length})`}
+              </h4>
+              {assignedUsers.length > 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                  {assignedUsers.map((user) => (
+                    <div key={user._id} style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      {user.profileImageUrl ? (
+                        <img
+                          src={user.profileImageUrl}
+                          alt={user.name}
+                          style={{ width: "24px", height: "24px", borderRadius: "50%", objectFit: "cover" }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            width: "24px",
+                            height: "24px",
+                            borderRadius: "50%",
+                            backgroundColor: "var(--primary)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: "white",
+                            fontSize: "0.75rem",
+                            fontWeight: "600"
+                          }}
+                        >
+                          {user.name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <span style={{ fontSize: "0.875rem" }}>{user.name}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <span style={{ color: "var(--text-light)", fontSize: "0.875rem" }}>Unassigned</span>
+              )}
             </div>
 
             <div>
