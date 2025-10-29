@@ -11,6 +11,7 @@ export const API_PATHS = {
   // Users
   GET_USERS: `${API_BASE_URL}/users`,
   GET_USER_BY_ID: (id) => `${API_BASE_URL}/users/${id}`,
+  DELETE_USER: `${API_BASE_URL}/users`,
 
   // Tasks
   GET_TASKS: `${API_BASE_URL}/tasks`,

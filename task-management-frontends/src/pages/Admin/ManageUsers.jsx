@@ -43,6 +43,19 @@ const ManageUsers = () => {
     }
   }
 
+
+  const handleDelete = async (userId) => {
+    if (window.confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
+      try {
+        await axiosInstance.delete(`${API_PATHS.DELETE_USER}/${userId}`);
+        setUsers(users.filter((user) => user._id !== userId));
+      } catch (error) {
+        console.error("Error deleting user:", error);
+        alert("Failed to delete user");
+      }
+    }
+  };
+
   if (loading) {
     return (
       <>
@@ -82,6 +95,7 @@ const ManageUsers = () => {
                 <th>In Progress</th>
                 <th>Completed</th>
                 <th>Total Tasks</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -129,6 +143,9 @@ const ManageUsers = () => {
                     </td>
                     <td style={{ fontWeight: "600" }}>
                       {(user.pendingTasks || 0) + (user.inProgressTasks || 0) + (user.completedTasks || 0)}
+                    </td>
+                    <td>
+                      <button onClick={() => handleDelete(user._id)} className="btn btn-danger">Delete</button>
                     </td>
                   </tr>
                 ))
