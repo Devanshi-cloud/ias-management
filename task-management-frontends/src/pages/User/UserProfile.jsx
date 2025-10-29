@@ -68,24 +68,6 @@ const UserProfile = () => {
     }
   }
 
-  const uploadProfileImage = async () => {
-    if (!profileImage) return null
-
-    try {
-      const formData = new FormData()
-      formData.append("image", profileImage)
-
-      const response = await axiosInstance.post(API_PATHS.UPLOAD_IMAGE, formData, {
-        headers: { "Content-Type": "multipart/form-data" }
-      })
-
-      return response.data.imageUrl
-    } catch (err) {
-      console.error("Error uploading image:", err)
-      throw new Error("Failed to upload profile picture")
-    }
-  }
-
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError("")
@@ -110,24 +92,25 @@ const UserProfile = () => {
     setLoading(true)
 
     try {
-      let profileImageUrl = user.profileImageUrl
-      if (profileImage) {
-        profileImageUrl = await uploadProfileImage()
-      }
+      const updateData = new FormData();
+      updateData.append("name", formData.name);
+      updateData.append("email", formData.email);
+      updateData.append("birthday", formData.birthday || null);
+      updateData.append("iasPosition", formData.iasPosition || null);
 
-      const updateData = {
-        name: formData.name,
-        email: formData.email,
-        birthday: formData.birthday || null,
-        iasPosition: formData.iasPosition || null,
-        profileImageUrl,
+      if (profileImage) {
+        updateData.append("profileImage", profileImage);
       }
 
       if (formData.newPassword) {
-        updateData.password = formData.newPassword
+        updateData.append("password", formData.newPassword);
       }
 
-      const response = await axiosInstance.put(API_PATHS.UPDATE_PROFILE, updateData)
+      const response = await axiosInstance.put(API_PATHS.UPDATE_PROFILE(user._id), updateData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
       
       updateUser(response.data)
       setSuccess("Profile updated successfully!")

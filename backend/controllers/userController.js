@@ -54,6 +54,56 @@ const getUserById = async (req, res) => {
   }
 };
 
+// @desc    Update user profile
+// @route   PUT /api/users/:id
+// @access  Private
+const updateUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Check if the user is authorized to update this profile
+    if (user._id.toString() !== req.user.id && req.user.role !== "admin") {
+      return res.status(401).json({ message: "Not authorized" });
+    }
+
+    const { name, email, password, birthday, iasPosition } = req.body;
+
+    // Update fields
+    user.name = name || user.name;
+    user.email = email || user.email;
+    user.birthday = birthday || user.birthday;
+    user.iasPosition = iasPosition || user.iasPosition;
+
+    if (req.file) {
+      user.profileImageUrl = `/uploads/${req.file.filename}`;
+    }
+
+    if (password) {
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(password, salt);
+    }
+
+    const updatedUser = await user.save();
+
+    res.json({
+      _id: updatedUser._id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      role: updatedUser.role,
+      profileImageUrl: updatedUser.profileImageUrl,
+      birthday: updatedUser.birthday,
+      iasPosition: updatedUser.iasPosition,
+      token: req.headers.authorization.split(" ")[1] // Keep the token the same
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
 
 
-module.exports = { getUsers, getUserById };
+
+module.exports = { getUsers, getUserById, updateUser };

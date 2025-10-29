@@ -76,6 +76,8 @@ const ManageUsers = () => {
               <tr>
                 <th>User</th>
                 <th>Email</th>
+                <th>Birthday</th>
+                <th>Position</th>
                 <th>Pending Tasks</th>
                 <th>In Progress</th>
                 <th>Completed</th>
@@ -114,6 +116,8 @@ const ManageUsers = () => {
                       </div>
                     </td>
                     <td>{user.email}</td>
+                    <td>{user.birthday ? new Date(user.birthday).toLocaleDateString() : "N/A"}</td>
+                    <td>{user.iasPosition || "N/A"}</td>
                     <td>
                       <span className="badge badge-pending">{user.pendingTasks || 0}</span>
                     </td>

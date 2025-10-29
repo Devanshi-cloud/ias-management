@@ -5,7 +5,7 @@ export const API_PATHS = {
   REGISTER: `${API_BASE_URL}/auth/register`,
   LOGIN: `${API_BASE_URL}/auth/login`,
   PROFILE: `${API_BASE_URL}/auth/profile`,
-  UPDATE_PROFILE: `${API_BASE_URL}/auth/profile`,
+  UPDATE_PROFILE: (id) => `${API_BASE_URL}/users/${id}`,
   UPLOAD_IMAGE: `${API_BASE_URL}/auth/upload-image`,
 
   // Users
