@@ -19,6 +19,10 @@ export default function AdminDashboard() {
       return
     }
     const userData = JSON.parse(user)
+    if (userData.role === "vp" || userData.role === "head") {
+      router.push("/admin/department-dashboard")
+      return
+    }
     if (userData.role !== "admin") {
       router.push("/user/dashboard")
       return

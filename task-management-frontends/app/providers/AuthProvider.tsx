@@ -6,7 +6,7 @@ interface User {
   _id: string
   name: string
   email: string
-  role: "admin" | "member"
+  role: "admin" | "vp" | "head" | "member"
   profileImageUrl?: string
   token: string
 }

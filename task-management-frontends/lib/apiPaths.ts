@@ -10,6 +10,7 @@ export const API_PATHS = {
   UPDATE_TASK_CHECKLIST: (id: string) => `/tasks/${id}/todo`,
   DASHBOARD_DATA: "/tasks/dashboard-data",
   USER_DASHBOARD_DATA: "/tasks/user-dashboard-data",
+  DEPARTMENT_DASHBOARD_DATA: "/tasks/department-dashboard-data",
 
   // Users
   USERS: "/users",
@@ -18,4 +19,6 @@ export const API_PATHS = {
   // Reports
   EXPORT_TASKS: "/reports/export/tasks",
   EXPORT_USERS: "/reports/export/users",
+  EXPORT_DEPARTMENT_TASKS: "/reports/export/department-tasks",
+  EXPORT_DEPARTMENT_USERS: "/reports/export/department-users",
 }

@@ -2,17 +2,16 @@
 
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { useAuth } from "@/app/providers/AuthProvider"
 
 export default function Navbar() {
   const router = useRouter()
+  const { user, logout } = useAuth()
+  console.log("Navbar user (from useAuth):", user)
 
   const handleLogout = () => {
-    localStorage.removeItem("token")
-    localStorage.removeItem("user")
-    router.push("/login")
+    logout()
   }
-
-  const user = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("user") || "{}") : {}
 
   return (
     <nav style={{ background: "var(--primary)", color: "white", padding: "1rem 2rem" }}>
@@ -27,7 +26,7 @@ export default function Navbar() {
       >
         <h1 style={{ fontSize: "1.5rem", fontWeight: "bold" }}>Task Manager</h1>
         <div style={{ display: "flex", gap: "1.5rem", alignItems: "center" }}>
-          {user.role === "admin" ? (
+          {user?.role === "admin" ? (
             <>
               <Link href="/admin/dashboard" style={{ color: "white", textDecoration: "none" }}>
                 Dashboard
@@ -40,6 +39,21 @@ export default function Navbar() {
               </Link>
               <Link href="/admin/manage-users" style={{ color: "white", textDecoration: "none" }}>
                 Manage Users
+              </Link>
+            </>
+          ) : user?.role === "vp" || user?.role === "head" ? (
+            <>
+              <Link href="/admin/department-dashboard" style={{ color: "white", textDecoration: "none" }}>
+                Department Dashboard
+              </Link>
+              <Link href="/admin/create-task" style={{ color: "white", textDecoration: "none" }}>
+                Create Task
+              </Link>
+              <Link href="/admin/manage-tasks" style={{ color: "white", textDecoration: "none" }}>
+                Manage Department Tasks
+              </Link>
+              <Link href="/admin/manage-users" style={{ color: "white", textDecoration: "none" }}>
+                Manage Department Users
               </Link>
             </>
           ) : (

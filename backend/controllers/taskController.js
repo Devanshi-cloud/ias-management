@@ -1,4 +1,5 @@
 const Task = require("../models/Task");
+const User = require("../models/User");
 
 // @desc    Get all tasks (Admin: all, User: only assigned tasks)
 // @route   GET /api/tasks
@@ -16,7 +17,16 @@ const getTasks = async (req, res) => {
       if (req.user.role === "admin") {
         // Admin: get all tasks
         tasks = await Task.find(filter).populate("assignedTo", "name email profileImageUrl");
-      } else {
+      } else if (req.user.role === "vp" || req.user.role === "head") {
+        // VP/Head: get tasks for their department members
+        const departmentMembers = await User.find({ department: req.user.department }).select('_id');
+        const memberIds = departmentMembers.map(member => member._id);
+        tasks = await Task.find({ ...filter, assignedTo: { $in: memberIds } }).populate(
+          "assignedTo",
+          "name email profileImageUrl"
+        );
+      }
+      else {
         // User: get only assigned tasks
         tasks = await Task.find({ ...filter, assignedTo: req.user._id }).populate(
           "assignedTo",
@@ -33,7 +43,16 @@ const getTasks = async (req, res) => {
       );
   
       // --- Status summary counts ---
-      const baseFilter = req.user.role === "admin" ? {} : { assignedTo: req.user._id };
+      let baseFilter = {};
+      if (req.user.role === "admin") {
+        baseFilter = {};
+      } else if (req.user.role === "vp" || req.user.role === "head") {
+        const departmentMembers = await User.find({ department: req.user.department }).select('_id');
+        const memberIds = departmentMembers.map(member => member._id);
+        baseFilter = { assignedTo: { $in: memberIds } };
+      } else {
+        baseFilter = { assignedTo: req.user._id };
+      }
   
       const allTasks = await Task.countDocuments(baseFilter);
   
@@ -81,6 +100,27 @@ const getTaskById = async (req, res) => {
         return res.status(404).json({ message: "Task not found" });
       }
   
+      // Authorization check for VP/Head
+      if (req.user.role === "vp" || req.user.role === "head") {
+        const departmentMembers = await User.find({ department: req.user.department }).select('_id');
+        const memberIds = departmentMembers.map(member => member._id.toString());
+        const isAssignedToDepartmentMember = task.assignedTo.some(assignedUser =>
+          memberIds.includes(assignedUser._id.toString())
+        );
+
+        if (!isAssignedToDepartmentMember) {
+          return res.status(403).json({ message: "Not authorized to view this task" });
+        }
+      } else if (req.user.role === "member") {
+        // Member can only view tasks assigned to them
+        const isAssignedToUser = task.assignedTo.some(assignedUser =>
+          assignedUser._id.toString() === req.user._id.toString()
+        );
+        if (!isAssignedToUser) {
+          return res.status(403).json({ message: "Not authorized to view this task" });
+        }
+      }
+  
       res.json(task);
     } catch (error) {
       res.status(500).json({ message: "Server error", error: error.message });
@@ -108,6 +148,20 @@ const createTask = async (req, res) => {
         return res
           .status(400)
           .json({ message: "assignedTo must be an array of user IDs" });
+      }
+
+      // Authorization for VP/Head to create tasks for their department members
+      if (req.user.role === "vp" || req.user.role === "head") {
+        const departmentMembers = await User.find({ department: req.user.department }).select('_id');
+        const memberIds = departmentMembers.map(member => member._id.toString());
+
+        const allAssignedInDepartment = assignedTo.every(assignedUserId =>
+          memberIds.includes(assignedUserId)
+        );
+
+        if (!allAssignedInDepartment) {
+          return res.status(403).json({ message: "Not authorized to assign tasks to users outside your department" });
+        }
       }
   
       // Create the new task
@@ -140,6 +194,24 @@ const updateTask = async (req, res) => {
         return res.status(404).json({ message: "Task not found" });
       }
   
+      // Authorization check
+      if (req.user.role !== "admin") {
+        const assignedToUserIds = task.assignedTo.map(id => id.toString());
+        let isAuthorized = false;
+
+        if (req.user.role === "vp" || req.user.role === "head") {
+          const departmentMembers = await User.find({ department: req.user.department }).select('_id');
+          const memberIds = departmentMembers.map(member => member._id.toString());
+          isAuthorized = assignedToUserIds.some(assignedId => memberIds.includes(assignedId));
+        } else if (req.user.role === "member") {
+          isAuthorized = assignedToUserIds.includes(req.user._id.toString());
+        }
+
+        if (!isAuthorized) {
+          return res.status(403).json({ message: "Not authorized to update this task" });
+        }
+      }
+
       // Update basic fields
       task.title = req.body.title || task.title;
       task.description = req.body.description || task.description;
@@ -154,6 +226,19 @@ const updateTask = async (req, res) => {
           return res
             .status(400)
             .json({ message: "assignedTo must be an array of user IDs" });
+        }
+
+        // If VP/Head is updating assignedTo, ensure new assignees are in their department
+        if (req.user.role === "vp" || req.user.role === "head") {
+          const departmentMembers = await User.find({ department: req.user.department }).select('_id');
+          const memberIds = departmentMembers.map(member => member._id.toString());
+          const allNewAssignedInDepartment = req.body.assignedTo.every(assignedUserId =>
+            memberIds.includes(assignedUserId)
+          );
+
+          if (!allNewAssignedInDepartment) {
+            return res.status(403).json({ message: "Not authorized to assign tasks to users outside your department" });
+          }
         }
         task.assignedTo = req.body.assignedTo;
       }
@@ -171,10 +256,30 @@ const updateTask = async (req, res) => {
 // @access  Private (Admin)
 const deleteTask = async (req, res) => {
   try {
-    const task = await Task.findByIdAndDelete(req.params.id);
+    const task = await Task.findById(req.params.id); // Find first to check authorization
+
     if (!task) {
       return res.status(404).json({ message: "Task not found" });
     }
+
+    // Authorization check
+    if (req.user.role !== "admin") {
+      const assignedToUserIds = task.assignedTo.map(id => id.toString());
+      let isAuthorized = false;
+
+      if (req.user.role === "vp" || req.user.role === "head") {
+        const departmentMembers = await User.find({ department: req.user.department }).select('_id');
+        const memberIds = departmentMembers.map(member => member._id.toString());
+        isAuthorized = assignedToUserIds.some(assignedId => memberIds.includes(assignedId));
+      }
+      // Members cannot delete tasks, so no 'else if (req.user.role === "member")' needed here.
+
+      if (!isAuthorized) {
+        return res.status(403).json({ message: "Not authorized to delete this task" });
+      }
+    }
+
+    await Task.findByIdAndDelete(req.params.id); // Now delete
     res.status(200).json({ message: "Task deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
@@ -192,17 +297,22 @@ const updateTaskStatus = async (req, res) => {
         return res.status(404).json({ message: "Task not found" });
       }
   
-      // Normalize assignedTo into an array
-      const assignedArray = Array.isArray(task.assignedTo)
-        ? task.assignedTo
-        : [task.assignedTo];
-  
-      const isAssigned = assignedArray.some(
-        (userId) => userId.toString() === req.user._id.toString()
-      );
-  
-      if (!isAssigned && req.user.role !== "admin") {
-        return res.status(403).json({ message: "Not authorized" });
+      // Authorization check
+      if (req.user.role !== "admin") {
+        const assignedToUserIds = task.assignedTo.map(id => id.toString());
+        let isAuthorized = false;
+
+        if (req.user.role === "vp" || req.user.role === "head") {
+          const departmentMembers = await User.find({ department: req.user.department }).select('_id');
+          const memberIds = departmentMembers.map(member => member._id.toString());
+          isAuthorized = assignedToUserIds.some(assignedId => memberIds.includes(assignedId));
+        } else if (req.user.role === "member") {
+          isAuthorized = assignedToUserIds.includes(req.user._id.toString());
+        }
+
+        if (!isAuthorized) {
+          return res.status(403).json({ message: "Not authorized to update this task status" });
+        }
       }
   
       task.status = req.body.status || task.status;
@@ -237,20 +347,24 @@ const updateTaskChecklist = async (req, res) => {
         return res.status(404).json({ message: "Task not found" });
       }
   
-      // Normalize assignedTo into an array (to avoid `.includes` errors)
-      const assignedArray = Array.isArray(task.assignedTo)
-        ? task.assignedTo
-        : [task.assignedTo];
-  
-      // Check permission — only assigned users or admins can update
-      const isAssigned = assignedArray.some(
-        (userId) => userId.toString() === req.user._id.toString()
-      );
-  
-      if (!isAssigned && req.user.role !== "admin") {
-        return res
-          .status(403)
-          .json({ message: "Not authorized to update checklist" });
+      // Authorization check
+      if (req.user.role !== "admin") {
+        const assignedToUserIds = task.assignedTo.map(id => id.toString());
+        let isAuthorized = false;
+
+        if (req.user.role === "vp" || req.user.role === "head") {
+          const departmentMembers = await User.find({ department: req.user.department }).select('_id');
+          const memberIds = departmentMembers.map(member => member._id.toString());
+          isAuthorized = assignedToUserIds.some(assignedId => memberIds.includes(assignedId));
+        } else if (req.user.role === "member") {
+          isAuthorized = assignedToUserIds.includes(req.user._id.toString());
+        }
+
+        if (!isAuthorized) {
+          return res
+            .status(403)
+            .json({ message: "Not authorized to update checklist" });
+        }
       }
   
       // Replace the checklist with the updated one
@@ -381,6 +495,103 @@ const getDashboardData = async (req, res) => {
   };
   
 
+  
+// @desc    Dashboard Data (Department-specific for VP/Head)
+// @route   GET /api/tasks/department-dashboard-data
+// @access  Private (VP, Head)
+const getDepartmentDashboardData = async (req, res) => {
+    try {
+      const userDepartment = req.user.department;
+      if (!userDepartment) {
+        return res.status(400).json({ message: "User does not have a department assigned." });
+      }
+
+      const departmentMembers = await User.find({ department: userDepartment }).select('_id');
+      const memberIds = departmentMembers.map(member => member._id);
+
+      // 🔹 Fetch main counts
+      const totalTasks = await Task.countDocuments({ assignedTo: { $in: memberIds } });
+      const pendingTasks = await Task.countDocuments({ assignedTo: { $in: memberIds }, status: "Pending" });
+      const completedTasks = await Task.countDocuments({ assignedTo: { $in: memberIds }, status: "Completed" });
+      const overdueTasks = await Task.countDocuments({
+        assignedTo: { $in: memberIds },
+        status: { $ne: "Completed" },
+        dueDate: { $lt: new Date() },
+      });
+  
+      // ===============================
+      // 🔹 TASK DISTRIBUTION BY STATUS
+      // ===============================
+      const taskStatuses = ["Pending", "In Progress", "Completed"];
+      const taskDistributionRaw = await Task.aggregate([
+        { $match: { assignedTo: { $in: memberIds } } },
+        {
+          $group: {
+            _id: "$status",
+            count: { $sum: 1 },
+          },
+        },
+      ]);
+  
+      const taskDistribution = taskStatuses.reduce((acc, status) => {
+        const formattedKey = status.replace(/\s+/g, "");
+        acc[formattedKey] =
+          taskDistributionRaw.find((item) => item._id === status)?.count || 0;
+        return acc;
+      }, {});
+      taskDistribution["All"] = totalTasks;
+  
+      // ===============================
+      // 🔹 TASK DISTRIBUTION BY PRIORITY
+      // ===============================
+      const taskPriorities = ["Low", "Medium", "High"];
+      const taskPriorityLevelsRaw = await Task.aggregate([
+        { $match: { assignedTo: { $in: memberIds } } },
+        {
+          $group: {
+            _id: "$priority",
+            count: { $sum: 1 },
+          },
+        },
+      ]);
+  
+      const taskPriorityLevels = taskPriorities.reduce((acc, priority) => {
+        acc[priority] =
+          taskPriorityLevelsRaw.find((item) => item._id === priority)?.count || 0;
+        return acc;
+      }, {});
+  
+      // ===============================
+      // 🔹 RECENT TASKS (last 10)
+      // ===============================
+      const recentTasks = await Task.find({ assignedTo: { $in: memberIds } })
+        .sort({ createdAt: -1 }) // Most recent first
+        .limit(10)
+        .select("title status priority dueDate createdAt");
+  
+      // ===============================
+      // 🔹 COMBINED RESPONSE
+      // ===============================
+      res.status(200).json({
+        statistics: {
+          totalTasks,
+          pendingTasks,
+          completedTasks,
+          overdueTasks,
+        },
+        charts: {
+          taskDistribution,
+          taskPriorityLevels,
+        },
+        recentTasks,
+      });
+    } catch (error) {
+      console.error("Department Dashboard error:", error);
+      res.status(500).json({ message: "Server error", error: error.message });
+    }
+  };
+  
+
 // @desc    Dashboard Data (User-specific)
 // @route   GET /api/tasks/user-dashboard-data
 // @access  Private
@@ -462,5 +673,6 @@ module.exports = {
   updateTaskChecklist,
   getDashboardData,
   getUserDashboardData,
+  getDepartmentDashboardData,
 };
  

@@ -7,7 +7,7 @@ const UserSchema = new mongoose.Schema(
     password: { type: String, required: true },
     profileImageUrl: { type: String, default: null },
     
-    // New fields for birthday and IAS position
+    // Birthday and Position
     birthday: { type: Date, default: null },
     iasPosition: {
       type: String,
@@ -15,13 +15,42 @@ const UserSchema = new mongoose.Schema(
       default: null
     },
     
+    // Hierarchical Role System
     role: {
       type: String,
-      enum: ["admin", "member"],
+      enum: ["admin", "vp", "head", "member"],
       default: "member",
     },
+    
+    // Department/Team assignment for hierarchy
+    department: {
+      type: String,
+      enum: ["COMMUNICATION", "FINANCE", "DESIGN AND MEDIA", "TECH", "HOSPITALITY", "GENERAL", null],
+      default: null
+    },
+    
+    // Reference to supervisor (VP or Head)
+    supervisor: { 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: "User",
+      default: null 
+    },
+    
+    // For VPs and Heads - their team members
+    teamMembers: [{ 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: "User" 
+    }],
+    
+    // Birthday reminder sent flag (reset annually)
+    lastBirthdayReminderYear: { type: Number, default: null }
   },
   { timestamps: true }
 );
+
+// Index for efficient queries
+UserSchema.index({ role: 1, department: 1 });
+UserSchema.index({ supervisor: 1 });
+UserSchema.index({ birthday: 1 });
 
 module.exports = mongoose.model("User", UserSchema);

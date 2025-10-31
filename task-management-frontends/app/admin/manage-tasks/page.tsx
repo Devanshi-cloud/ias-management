@@ -35,8 +35,9 @@ export default function ManageTasks() {
       return
     }
     const userData = JSON.parse(user)
-    if (userData.role !== "admin") {
-      router.push("/user/dashboard")
+    // Allow admin, vp, and head to access this page
+    if (userData.role !== "admin" && userData.role !== "vp" && userData.role !== "head") {
+      router.push("/user/dashboard") // Redirect regular members
       return
     }
 

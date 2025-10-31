@@ -7,7 +7,13 @@ const bcrypt = require("bcryptjs");
 // @access  Private (Admin)
 const getUsers = async (req, res) => {
     try {
-      const users = await User.find({ role: "member" }).select("-password");
+      let query = { role: "member" }; // Default for admin
+
+      if (req.user.role === "vp" || req.user.role === "head") {
+        query = { role: "member", department: req.user.department };
+      }
+
+      const users = await User.find(query).select("-password");
 
       // Add task counts to each user
       const usersWithTaskCounts = await Promise.all(
@@ -48,6 +54,19 @@ const getUserById = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
+
+    // Authorization check
+    if (req.user.role !== "admin") {
+      if (req.user.role === "vp" || req.user.role === "head") {
+        if (user.department !== req.user.department) {
+          return res.status(403).json({ message: "Not authorized to view this user" });
+        }
+      } else if (req.user.role === "member") {
+        if (user._id.toString() !== req.user._id.toString()) {
+          return res.status(403).json({ message: "Not authorized to view this user" });
+        }
+      }
+    }
     res.json(user);
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
@@ -65,18 +84,41 @@ const updateUser = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Check if the user is authorized to update this profile
-    if (user._id.toString() !== req.user.id && req.user.role !== "admin") {
-      return res.status(401).json({ message: "Not authorized" });
+    // Authorization Check
+    if (req.user.role !== "admin") {
+      if (req.user.role === "vp" || req.user.role === "head") {
+        // VP/Head can update users in their department
+        if (user.department !== req.user.department) {
+          return res.status(403).json({ message: "Not authorized to update this user" });
+        }
+        // Prevent VP/Head from changing role or department
+        if (req.body.role && req.body.role !== user.role) {
+          return res.status(403).json({ message: "Not authorized to change user role" });
+        }
+        if (req.body.department && req.body.department !== user.department) {
+          return res.status(403).json({ message: "Not authorized to change user department" });
+        }
+      } else if (req.user.role === "member") {
+        // Member can only update their own profile
+        if (user._id.toString() !== req.user._id.toString()) {
+          return res.status(403).json({ message: "Not authorized to update this user" });
+        }
+      }
     }
 
-    const { name, email, password, birthday, iasPosition } = req.body;
+    const { name, email, password, birthday, iasPosition, role, department } = req.body; // Include role and department for admin updates
 
     // Update fields
     user.name = name || user.name;
     user.email = email || user.email;
     user.birthday = birthday || user.birthday;
     user.iasPosition = iasPosition || user.iasPosition;
+
+    // Admin can update role and department
+    if (req.user.role === "admin") {
+      user.role = role || user.role;
+      user.department = department || user.department;
+    }
 
     if (req.file) {
       user.profileImageUrl = `/uploads/${req.file.filename}`;
@@ -97,6 +139,7 @@ const updateUser = async (req, res) => {
       profileImageUrl: updatedUser.profileImageUrl,
       birthday: updatedUser.birthday,
       iasPosition: updatedUser.iasPosition,
+      department: updatedUser.department, // Include department in response
       token: req.headers.authorization.split(" ")[1] // Keep the token the same
     });
   } catch (error) {
@@ -115,6 +158,18 @@ const deleteUser = async (req, res) => {
             return res.status(404).json({ message: "User not found" });
         }
 
+        // Authorization Check
+        if (req.user.role !== "admin") {
+          if (req.user.role === "vp" || req.user.role === "head") {
+            // VP/Head can delete users in their department
+            if (user.department !== req.user.department) {
+              return res.status(403).json({ message: "Not authorized to delete this user" });
+            }
+          } else { // Member role
+            return res.status(403).json({ message: "Not authorized to delete users" });
+          }
+        }
+        
         await user.deleteOne();
 
         res.json({ message: "User removed" });
