@@ -9,13 +9,6 @@ const userRoutes = require("./routes/userRoutes");
 const taskRoutes = require("./routes/taskRoutes");
 const reportRoutes = require("./routes/reportRoutes");
 
-const app = express();
-
-// Middleware to handle CORS
-const allowedOrigins = [
-  "https://ias-management-1.onrender.com",
-  "http://localhost:3000"
-];
 
 const app = express();
 
