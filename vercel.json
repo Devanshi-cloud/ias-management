@@ -1,11 +1,11 @@
 {
+  "version": 2,
   "builds": [
-    {
-      "src": "task-management-frontends/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "task-management-frontends/dist"
-      }
-    }
+    { "src": "backend/server.js", "use": "@vercel/node" },
+    { "src": "task-management-frontends/package.json", "use": "@vercel/static-build" }
+  ],
+  "routes": [
+    { "src": "/api/.*", "dest": "/backend/server.js" },
+    { "src": "/(.*)", "dest": "/task-management-frontends/$1" }
   ]
 }
