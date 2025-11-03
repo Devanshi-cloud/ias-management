@@ -1,7 +1,7 @@
 import axios from "axios"
 
 const axiosInstance = axios.create({
-  baseURL: "/api",
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "https://ias-management-a6k0.onrender.com/api",
   headers: {
     "Content-Type": "application/json",
   },
