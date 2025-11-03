@@ -11,33 +11,11 @@ const reportRoutes = require("./routes/reportRoutes");
 
 const app = express();
 
-// CORS configuration
-const allowedOrigins = [
-    "http://localhost:3000", // Next.js dev
-    "http://127.0.0.1:3000",
-    "http://localhost:5173", // Vite dev (if used)
-    "https://ias-management-a6k0.onrender.com", // Render backend (this service)
-    "https://ias-management-1.onrender.com", // legacy/alt Render URL
-];
+// Allow all origins
+app.use(cors());
 
-const corsOptions = {
-    origin: function (origin, callback) {
-        // Allow non-browser requests (no origin) and whitelisted origins
-        if (!origin || allowedOrigins.includes(origin)) {
-            return callback(null, true);
-        }
-        return callback(new Error("Not allowed by CORS"));
-    },
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    // Leave allowedHeaders undefined so the cors package reflects requested headers
-    credentials: true,
-    optionsSuccessStatus: 204,
-};
-
-app.use(cors(corsOptions));
-
-// Handle preflight for all routes with the same options (important for Render)
-app.options(/.*/, cors(corsOptions));
+// Handle preflight for all routes
+app.options(/.*/, cors());
 
 app.use(express.json());
 
