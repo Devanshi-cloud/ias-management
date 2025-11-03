@@ -12,11 +12,24 @@ const reportRoutes = require("./routes/reportRoutes");
 const app = express();
 
 // Middleware to handle CORS
+const allowedOrigins = [
+  "https://ias-management-1.onrender.com",
+  "http://localhost:3000"
+];
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "https://ias-management-1.onrender.com", // Added your frontend domain
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true); // allow mobile/postman etc.
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      } else {
+        return callback(new Error("Not allowed by CORS"));
+      }
+    },
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
   })
 );
 
