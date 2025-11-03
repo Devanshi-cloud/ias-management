@@ -2,7 +2,9 @@ const mongoose = require("mongoose");
 
 const connectDB = async () => {
     try {
-        await mongoose.connect(process.env.MONGO_URI, {});
+        await mongoose.connect(process.env.MONGO_URI, {
+            tlsAllowInvalidCertificates: true, // Temporarily bypass SSL certificate validation
+        });
         console.log("✅ MongoDB connected");
     } catch (error) {
         console.error("❌ MongoDB connection error:", error);
