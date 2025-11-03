@@ -16465,7 +16465,7 @@ const {
     mergeConfig: MX,
   } = Ye,
   ke = Ye.create({
-    baseURL: "http://localhost:3000/api",
+    baseURL: "https://ias-management-a6k0.onrender.com/api",
     headers: { "Content-Type": "application/json" },
   });
 ke.interceptors.request.use(

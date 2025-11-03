@@ -13,7 +13,7 @@ export default defineConfig({
     port: 3000,
     proxy: {
       "/api": {
-        target: "http://localhost:3000",
+        target: "https://ias-management-a6k0.onrender.com",
         changeOrigin: true,
       },
     },
