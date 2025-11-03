@@ -37,7 +37,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 // Handle preflight for all routes with the same options (important for Render)
-app.options("*", cors(corsOptions));
+app.options("/.*/", cors(corsOptions));
 
 app.use(express.json());
 
