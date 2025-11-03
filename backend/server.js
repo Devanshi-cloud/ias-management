@@ -17,21 +17,33 @@ const allowedOrigins = [
   "http://localhost:3000"
 ];
 
+const app = express();
+
+const allowedOrigins = [
+  "https://ias-management-1.onrender.com",
+  "http://localhost:3000"
+];
+
 app.use(
   cors({
     origin: function (origin, callback) {
-      if (!origin) return callback(null, true); // allow mobile/postman etc.
+      if (!origin) return callback(null, true);
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       } else {
         return callback(new Error("Not allowed by CORS"));
       }
     },
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
 );
+
+// Handle preflight explicitly (important for Render)
+app.options("*", cors());
+
+app.use(express.json());
 
 // Connect to Database
 connectDB();
