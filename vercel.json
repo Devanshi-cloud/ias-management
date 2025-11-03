@@ -1,3 +1,11 @@
 {
-  "root": "task-management-frontends"
+  "builds": [
+    {
+      "src": "task-management-frontends/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "task-management-frontends/dist"
+      }
+    }
+  ]
 }
