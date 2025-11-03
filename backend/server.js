@@ -34,7 +34,7 @@ app.use(
 );
 
 // Handle preflight explicitly (important for Render)
-app.options("*", cors());
+app.options(/.*/, cors());
 
 app.use(express.json());
 
