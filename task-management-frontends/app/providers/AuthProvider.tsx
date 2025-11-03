@@ -46,7 +46,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [])
 
   const login = async (email: string, password: string) => {
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api"
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://ias-management-a6k0.onrender.com/api"
     const response = await fetch(`${API_URL}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -65,7 +65,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const register = async (userData: any) => {
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api"
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://ias-management-a6k0.onrender.com/api"
     const response = await fetch(`${API_URL}/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

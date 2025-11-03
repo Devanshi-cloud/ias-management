@@ -5,7 +5,7 @@ A modern React-based task management application built with Vite.
 ## Features
 
 - **Authentication**: Login and signup with JWT tokens
-- **Admin Dashboard**: 
+- **Admin Dashboard**:
   - View statistics and charts
   - Create and manage tasks
   - Manage users
@@ -35,24 +35,24 @@ A modern React-based task management application built with Vite.
 ### Installation
 
 1. Install dependencies:
-\`\`\`bash
-npm install
-\`\`\`
+   \`\`\`bash
+   npm install
+   \`\`\`
 
 2. Create a `.env` file:
-\`\`\`bash
-cp .env.example .env
-\`\`\`
+   \`\`\`bash
+   cp .env.example .env
+   \`\`\`
 
 3. Update the `.env` file with your backend URL:
-\`\`\`
-VITE_API_URL=http://localhost:8000/api
-\`\`\`
+   \`\`\`
+   VITE_API_URL=https://ias-management-a6k0.onrender.com/api
+   \`\`\`
 
 4. Start the development server:
-\`\`\`bash
-npm run dev
-\`\`\`
+   \`\`\`bash
+   npm run dev
+   \`\`\`
 
 The app will be available at `http://localhost:3000`
 
@@ -60,22 +60,22 @@ The app will be available at `http://localhost:3000`
 
 \`\`\`
 src/
-├── components/       # Reusable components
-├── context/         # React context (Auth)
-├── hooks/           # Custom hooks
-├── pages/           # Page components
-│   ├── Admin/       # Admin pages
-│   ├── Auth/        # Authentication pages
-│   └── User/        # User pages
-├── routes/          # Route configuration
-├── utils/           # Utility functions
-│   ├── apiPaths.js  # API endpoints
-│   ├── axiosInstance.js
-│   ├── data.js      # Static data
-│   ├── helper.js    # Helper functions
-│   └── uploadimage.js
-├── App.jsx          # Main app component
-└── main.jsx         # Entry point
+├── components/ # Reusable components
+├── context/ # React context (Auth)
+├── hooks/ # Custom hooks
+├── pages/ # Page components
+│ ├── Admin/ # Admin pages
+│ ├── Auth/ # Authentication pages
+│ └── User/ # User pages
+├── routes/ # Route configuration
+├── utils/ # Utility functions
+│ ├── apiPaths.js # API endpoints
+│ ├── axiosInstance.js
+│ ├── data.js # Static data
+│ ├── helper.js # Helper functions
+│ └── uploadimage.js
+├── App.jsx # Main app component
+└── main.jsx # Entry point
 \`\`\`
 
 ## Available Scripts
@@ -88,11 +88,12 @@ src/
 
 The frontend connects to the Express backend API. Make sure the backend is running before starting the frontend.
 
-Default backend URL: `http://localhost:8000/api`
+Default backend URL: `https://ias-management-a6k0.onrender.com/api`
 
 ## Authentication
 
 The app uses JWT tokens stored in localStorage. Users are automatically redirected based on their role:
+
 - Admin users → `/admin/dashboard`
 - Regular users → `/user/dashboard`
 
