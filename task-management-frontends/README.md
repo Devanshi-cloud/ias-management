@@ -46,7 +46,7 @@ A modern React-based task management application built with Vite.
 
 3. Update the `.env` file with your backend URL:
    \`\`\`
-   VITE_API_URL=https://ias-management-a6k0.onrender.com/api
+   VITE_API_URL=http://localhost:3000/api
    \`\`\`
 
 4. Start the development server:
@@ -88,7 +88,7 @@ src/
 
 The frontend connects to the Express backend API. Make sure the backend is running before starting the frontend.
 
-Default backend URL: `https://ias-management-a6k0.onrender.com/api`
+Default backend URL: `http://localhost:3000/api`
 
 ## Authentication
 

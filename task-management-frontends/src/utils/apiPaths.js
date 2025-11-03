@@ -1,4 +1,5 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || "https://ias-management-a6k0.onrender.com/api"
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 
 export const API_PATHS = {
   // Auth
@@ -27,4 +28,4 @@ export const API_PATHS = {
   // Reports
   EXPORT_TASKS: `${API_BASE_URL}/reports/export/tasks`,
   EXPORT_USERS: `${API_BASE_URL}/reports/export/users`,
-}
+};
