@@ -19,3 +19,6 @@ Developed using **Node.js** and **Express.js** with **MongoDB** as the database.
 
 **Technologies:**  
 Node.js · Express.js · MongoDB (Mongoose) · JWT · Bcrypt.js · Multer · Nodemailer · ExcelJS · Dotenv · CORS
+
+email: devanshijaiswal7@gmail.com
+password: 12ab34cd//
