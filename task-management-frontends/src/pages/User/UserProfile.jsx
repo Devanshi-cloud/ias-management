@@ -95,8 +95,8 @@ const UserProfile = () => {
       const updateData = new FormData();
       updateData.append("name", formData.name);
       updateData.append("email", formData.email);
-      updateData.append("birthday", formData.birthday || null);
-      updateData.append("iasPosition", formData.iasPosition || null);
+      updateData.append("birthday", formData.birthday || "");
+      updateData.append("iasPosition", formData.iasPosition || "");
 
       if (profileImage) {
         updateData.append("profileImage", profileImage);

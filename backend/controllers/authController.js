@@ -20,13 +20,16 @@ const registerUser = async (req, res) => {
       return res.status(400).json({ message: "User already exists" });
     }
 
-    // Determine user role (admin if correct token provided)
+    // Determine user role based on invite token
     let role = "member";
-    if (
-      adminInviteToken &&
-      adminInviteToken === process.env.ADMIN_INVITE_TOKEN
-    ) {
-      role = "admin";
+    if (adminInviteToken) {
+      if (adminInviteToken === process.env.ADMIN_INVITE_TOKEN) {
+        role = "admin";
+      } else if (adminInviteToken === process.env.VP_INVITE_TOKEN) {
+        role = "vp";
+      } else if (adminInviteToken === process.env.HEAD_INVITE_TOKEN) {
+        role = "head";
+      }
     }
 
     // Hash password

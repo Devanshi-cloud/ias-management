@@ -131,7 +131,7 @@ const SignUp = () => {
           </div>
 
           <div className="form-group">
-            <label htmlFor="adminInviteToken">Admin Invite Token (Optional)</label>
+            <label htmlFor="adminInviteToken">Invite Token (Optional)</label>
             <input
               type="text"
               id="adminInviteToken"
@@ -139,7 +139,7 @@ const SignUp = () => {
               className="input"
               value={formData.adminInviteToken}
               onChange={handleChange}
-              placeholder="Enter admin token if you have one"
+              placeholder="Enter invite token if you have one"
             />
             <small style={{ color: "var(--text-light)", fontSize: "0.75rem" }}>
               Leave blank to register as a regular user

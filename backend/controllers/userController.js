@@ -111,8 +111,8 @@ const updateUser = async (req, res) => {
     // Update fields
     user.name = name || user.name;
     user.email = email || user.email;
-    user.birthday = birthday || user.birthday;
-    user.iasPosition = iasPosition || user.iasPosition;
+    if (birthday !== undefined) user.birthday = birthday || null;
+    if (iasPosition !== undefined) user.iasPosition = iasPosition || null;
 
     // Admin can update role and department
     if (req.user.role === "admin") {
