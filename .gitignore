@@ -52,3 +52,4 @@ task-management-frontends/dist/
 # Backend specific
 backend/node_modules/
 backend/uploads/
+.vercel
