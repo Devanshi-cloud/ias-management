@@ -72,6 +72,14 @@ function App() {
             }
           />
           <Route
+            path="/admin/task/:id"
+            element={
+              <PrivateRoute role="admin">
+                <ViewTaskDetail />
+              </PrivateRoute>
+            }
+          />
+          <Route
             path="/admin/profile"
             element={
               <PrivateRoute role="admin">

@@ -8,6 +8,7 @@ import { API_PATHS } from "../../utils/apiPaths"
 import { ArrowLeft, Calendar, User, CheckCircle2, Circle, Users as UsersIcon } from "lucide-react"
 import { formatDate, getPriorityColor, isOverdue } from "../../utils/helper"
 import { statusOptions } from "../../utils/data"
+import TaskChat from "../../components/TaskChat"
 
 const ViewTaskDetail = () => {
   const { id } = useParams()
@@ -92,7 +93,7 @@ const ViewTaskDetail = () => {
       <Navbar />
       <div className="container">
         <button
-          onClick={() => navigate("/user/my-tasks")}
+          onClick={() => navigate(-1)}
           className="btn btn-secondary"
           style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1.5rem" }}
         >
@@ -280,7 +281,7 @@ const ViewTaskDetail = () => {
 
           {/* Attachments */}
           {task.attachments && (
-            <div>
+            <div style={{ marginBottom: "1.5rem" }}>
               <h3 style={{ fontSize: "1.125rem", fontWeight: "600", marginBottom: "0.5rem" }}>Attachments</h3>
               <a
                 href={task.attachments}
@@ -292,6 +293,9 @@ const ViewTaskDetail = () => {
               </a>
             </div>
           )}
+
+          {/* Chat */}
+          <TaskChat taskId={id} />
         </div>
       </div>
     </>

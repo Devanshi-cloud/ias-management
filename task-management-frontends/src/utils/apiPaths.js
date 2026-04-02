@@ -28,4 +28,8 @@ export const API_PATHS = {
   // Reports
   EXPORT_TASKS: `${API_BASE_URL}/reports/export/tasks`,
   EXPORT_USERS: `${API_BASE_URL}/reports/export/users`,
+
+  // Messages
+  GET_TASK_MESSAGES: (taskId) => `${API_BASE_URL}/messages/task/${taskId}`,
+  SEND_TASK_MESSAGE: (taskId) => `${API_BASE_URL}/messages/task/${taskId}`,
 };

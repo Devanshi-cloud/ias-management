@@ -14,9 +14,6 @@ const ManageTasks = () => {
   const [filteredTasks, setFilteredTasks] = useState([])
   const [filter, setFilter] = useState("All")
   const [loading, setLoading] = useState(true)
-  const [selectedTask, setSelectedTask] = useState(null)
-  const [showModal, setShowModal] = useState(false)
-
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -74,8 +71,7 @@ const ManageTasks = () => {
   }
 
   const viewTaskDetails = (task) => {
-    setSelectedTask(task)
-    setShowModal(true)
+    navigate(`/admin/task/${task._id}`)
   }
 
   const renderAssignedUsers = (assignedTo) => {
@@ -313,102 +309,6 @@ const ManageTasks = () => {
         </div>
       </div>
 
-      {/* Task Details Modal */}
-      {showModal && selectedTask && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ fontSize: "1.5rem", fontWeight: "700", marginBottom: "1rem" }}>{selectedTask.title}</h2>
-
-            <div style={{ marginBottom: "1rem" }}>
-              <strong>Description:</strong>
-              <p style={{ marginTop: "0.5rem", color: "var(--text-light)" }}>
-                {selectedTask.description || "No description"}
-              </p>
-            </div>
-
-            <div style={{ marginBottom: "1rem" }}>
-              <strong>Assigned To:</strong>
-              <div style={{ marginTop: "0.5rem" }}>
-                {selectedTask.assignedTo && selectedTask.assignedTo.length > 0 ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                    {(Array.isArray(selectedTask.assignedTo) ? selectedTask.assignedTo : [selectedTask.assignedTo]).map((user) => (
-                      <div key={user._id} style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                        {user.profileImageUrl ? (
-                          <img
-                            src={user.profileImageUrl}
-                            alt={user.name}
-                            style={{ width: "32px", height: "32px", borderRadius: "50%", objectFit: "cover" }}
-                          />
-                        ) : (
-                          <div
-                            style={{
-                              width: "32px",
-                              height: "32px",
-                              borderRadius: "50%",
-                              backgroundColor: "var(--primary)",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              color: "white",
-                              fontSize: "0.875rem",
-                              fontWeight: "600"
-                            }}
-                          >
-                            {user.name.charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                        <span>{user.name}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <span style={{ color: "var(--text-light)" }}>Unassigned</span>
-                )}
-              </div>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
-              <div>
-                <strong>Priority:</strong>
-                <p>
-                  <span className={`badge ${getPriorityColor(selectedTask.priority)}`}>{selectedTask.priority}</span>
-                </p>
-              </div>
-              <div>
-                <strong>Status:</strong>
-                <p>
-                  <span className={`badge ${getStatusColor(selectedTask.status)}`}>{selectedTask.status}</span>
-                </p>
-              </div>
-              <div>
-                <strong>Due Date:</strong>
-                <p>{formatDate(selectedTask.dueDate)}</p>
-              </div>
-              <div>
-                <strong>Progress:</strong>
-                <p>{selectedTask.progress || 0}%</p>
-              </div>
-            </div>
-
-            {selectedTask.todoChecklist && selectedTask.todoChecklist.length > 0 && (
-              <div style={{ marginBottom: "1rem" }}>
-                <strong>Checklist:</strong>
-                <ul style={{ marginTop: "0.5rem", paddingLeft: "1.5rem" }}>
-                  {selectedTask.todoChecklist.map((item, index) => (
-                    <li key={index} style={{ textDecoration: item.completed ? "line-through" : "none" }}>
-                      {item.text}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            <button onClick={() => setShowModal(false)} className="btn btn-primary" style={{ width: "100%" }}>
-              Close
-            </button>
-          </div>
-        </div>
-      )}
     </>
   )
 }
