@@ -17,10 +17,12 @@ const PrivateRoute = ({ children, role }) => {
     return <Navigate to="/login" replace />
   }
 
-  if (role && user.role !== role) {
-    // Redirect to appropriate dashboard based on role
-    const redirectPath = user.role === "admin" ? "/admin/dashboard" : "/user/dashboard"
-    return <Navigate to={redirectPath} replace />
+  if (role === "admin" && user.role !== "admin") {
+    return <Navigate to="/user/dashboard" replace />
+  }
+
+  if (role === "member" && user.role === "admin") {
+    return <Navigate to="/admin/dashboard" replace />
   }
 
   return children
