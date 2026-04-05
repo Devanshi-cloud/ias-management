@@ -20,6 +20,9 @@ app.options(/.*/, cors());
 
 app.use(express.json());
 
+// Serve uploaded files
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 // Connect to Database
 connectDB();
 

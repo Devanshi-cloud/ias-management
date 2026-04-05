@@ -24,6 +24,7 @@ export const API_PATHS = {
   UPDATE_TASK_CHECKLIST: (id) => `${API_BASE_URL}/tasks/${id}/todo`,
   DASHBOARD_DATA: `${API_BASE_URL}/tasks/dashboard-data`,
   USER_DASHBOARD_DATA: `${API_BASE_URL}/tasks/user-dashboard-data`,
+  DEPARTMENT_DASHBOARD_DATA: `${API_BASE_URL}/tasks/department-dashboard-data`,
 
   // Reports
   EXPORT_TASKS: `${API_BASE_URL}/reports/export/tasks`,

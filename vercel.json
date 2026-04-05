@@ -2,11 +2,15 @@
   "version": 2,
   "builds": [
     { "src": "backend/server.js", "use": "@vercel/node" },
-    { "src": "task-management-frontends/package.json", "use": "@vercel/static-build" }
+    {
+      "src": "task-management-frontends/package.json",
+      "use": "@vercel/static-build",
+      "config": { "distDir": "dist" }
+    }
   ],
   "routes": [
     { "src": "/api/.*", "dest": "/backend/server.js" },
-    { "src": "^/[^.]+$", "dest": "/task-management-frontends/index.html" },
-    { "src": "/(.*)", "dest": "/task-management-frontends/$1" }
+    { "src": "^/[^.]+$", "dest": "/task-management-frontends/dist/index.html" },
+    { "src": "/(.*)", "dest": "/task-management-frontends/dist/$1" }
   ]
 }

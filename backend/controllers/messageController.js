@@ -15,8 +15,20 @@ const getTaskMessages = async (req, res) => {
     const userRole = req.user.role;
 
     const isAssigned = task.assignedTo.map((id) => id.toString()).includes(userId);
+
     if (userRole !== "admin" && !isAssigned) {
-      return res.status(403).json({ message: "Access denied" });
+      // VP/Head can access messages for tasks assigned to their department members
+      if (userRole === "vp" || userRole === "head") {
+        const User = require("../models/User");
+        const departmentMembers = await User.find({ department: req.user.department }).select("_id");
+        const memberIds = departmentMembers.map((m) => m._id.toString());
+        const isDepartmentTask = task.assignedTo.some((id) => memberIds.includes(id.toString()));
+        if (!isDepartmentTask) {
+          return res.status(403).json({ message: "Access denied" });
+        }
+      } else {
+        return res.status(403).json({ message: "Access denied" });
+      }
     }
 
     const messages = await Message.find({ taskId })
@@ -48,8 +60,19 @@ const sendMessage = async (req, res) => {
     const userRole = req.user.role;
 
     const isAssigned = task.assignedTo.map((id) => id.toString()).includes(userId);
+
     if (userRole !== "admin" && !isAssigned) {
-      return res.status(403).json({ message: "Access denied" });
+      if (userRole === "vp" || userRole === "head") {
+        const User = require("../models/User");
+        const departmentMembers = await User.find({ department: req.user.department }).select("_id");
+        const memberIds = departmentMembers.map((m) => m._id.toString());
+        const isDepartmentTask = task.assignedTo.some((id) => memberIds.includes(id.toString()));
+        if (!isDepartmentTask) {
+          return res.status(403).json({ message: "Access denied" });
+        }
+      } else {
+        return res.status(403).json({ message: "Access denied" });
+      }
     }
 
     const message = await Message.create({
