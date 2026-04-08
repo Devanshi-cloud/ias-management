@@ -7,7 +7,7 @@ const bcrypt = require("bcryptjs");
 // @access  Private (Admin)
 const getUsers = async (req, res) => {
     try {
-      let query = { role: "member" }; // Default for admin
+      let query = {}; // Admin sees all users (including themselves)
 
       if (req.user.role === "vp" || req.user.role === "head") {
         query = { role: "member", department: req.user.department };
