@@ -23,11 +23,12 @@ const taskSchema = new mongoose.Schema(
     },
     dueDate: { type: Date, required: true },
     assignedTo: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // ✅ Changed to array
+    group: { type: mongoose.Schema.Types.ObjectId, ref: "Group", default: null },
     assignedAt: { type: Date, default: Date.now },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     taskType: {
       type: String,
-      enum: ["personal", "assigned"],
+      enum: ["personal", "assigned", "group"],
       default: "assigned",
     },
     attachments: { type: String },

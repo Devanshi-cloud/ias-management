@@ -16,6 +16,14 @@ const getManagedGroupIds = async (user) => {
   return groups.map((group) => group._id.toString());
 };
 
+const getCreatableGroupIds = async (user) => {
+  if (isAdmin(user)) {
+    const groups = await Group.find().select("_id");
+    return groups.map((group) => group._id.toString());
+  }
+  return getManagedGroupIds(user);
+};
+
 const canAssignAsGroupAdmin = async (user, target) => {
   const managedGroupIds = await getManagedGroupIds(user);
   if (!managedGroupIds.length) return false;
@@ -31,6 +39,11 @@ const canCreateAssignableTasksForUser = async (user) => {
   if (canCreateAssignedTasks(user)) return true;
   const managedGroupIds = await getManagedGroupIds(user);
   return managedGroupIds.length > 0;
+};
+
+const canCreateGroupTasksForUser = async (user) => {
+  const creatableGroupIds = await getCreatableGroupIds(user);
+  return creatableGroupIds.length > 0;
 };
 
 const getVisibleUsers = async (user) => {
@@ -69,11 +82,15 @@ const getVisibleUserIds = async (user) => {
 
 const buildTaskVisibilityFilter = async (user, extraFilter = {}) => {
   const visibleUserIds = await getVisibleUserIds(user);
+  const userGroupIds = Array.isArray(user?.groups) ? user.groups.map((group) => normalizeId(group)).filter(Boolean) : [];
+  const managedGroupIds = await getManagedGroupIds(user);
+  const accessibleGroupIds = [...new Set([...userGroupIds, ...managedGroupIds])];
   return {
     ...extraFilter,
     $or: [
       { createdBy: user._id },
       { assignedTo: user._id },
+      { group: { $in: accessibleGroupIds } },
       {
         assignedTo: { $in: visibleUserIds },
       },
@@ -88,6 +105,11 @@ const canAccessTask = async (user, task) => {
 
   const assignedIds = (task.assignedTo || []).map((assignee) => normalizeId(assignee)).filter(Boolean);
   if (assignedIds.includes(userId)) return true;
+
+  const taskGroupId = normalizeId(task?.group);
+  const userGroupIds = Array.isArray(user?.groups) ? user.groups.map((group) => normalizeId(group)).filter(Boolean) : [];
+  const managedGroupIds = await getManagedGroupIds(user);
+  if (taskGroupId && [...userGroupIds, ...managedGroupIds].includes(taskGroupId)) return true;
 
   const visibleUserIds = await getVisibleUserIds(user);
   return assignedIds.some((assignedId) => visibleUserIds.includes(assignedId));
@@ -177,13 +199,39 @@ const buildChecklistInsights = async (scope) => {
   };
 };
 
-const validateAssignableUsers = async (user, assignedTo, taskType = "assigned") => {
+const validateAssignableUsers = async (user, assignedTo, taskType = "assigned", groupId = "") => {
   if (taskType === "personal") {
     if (!canCreatePersonalTasks(user)) {
       return { error: "Not authorized to create personal tasks" };
     }
 
-    return { normalizedAssignedTo: [user._id.toString()] };
+    return { normalizedAssignedTo: [user._id.toString()], normalizedGroupId: null };
+  }
+
+  if (taskType === "group") {
+    const creatableGroupIds = await getCreatableGroupIds(user);
+    if (!creatableGroupIds.length) {
+      return { error: "You are not authorized to create group tasks" };
+    }
+
+    const normalizedGroupId = normalizeId(groupId);
+    if (!normalizedGroupId) {
+      return { error: "A group must be selected for a group task" };
+    }
+
+    if (!creatableGroupIds.includes(normalizedGroupId)) {
+      return { error: "You can create group tasks only for groups you manage" };
+    }
+
+    const members = await User.find({ groups: normalizedGroupId }).select("_id");
+    if (!members.length) {
+      return { error: "Selected group has no members yet" };
+    }
+
+    return {
+      normalizedAssignedTo: members.map((member) => member._id.toString()),
+      normalizedGroupId,
+    };
   }
 
   if (!(await canCreateAssignableTasksForUser(user))) {
@@ -212,12 +260,16 @@ const validateAssignableUsers = async (user, assignedTo, taskType = "assigned") 
     return { error: "You can assign tasks only to teammates in your allowed level or managed groups" };
   }
 
-  return { normalizedAssignedTo: targets.map((target) => target._id.toString()) };
+  return { normalizedAssignedTo: targets.map((target) => target._id.toString()), normalizedGroupId: null };
 };
 
 const getAssignableUsers = async (req, res) => {
   try {
     const visibleUsers = await getVisibleUsers(req.user);
+    const creatableGroupIds = await getCreatableGroupIds(req.user);
+    const manageableGroups = creatableGroupIds.length
+      ? await Group.find({ _id: { $in: creatableGroupIds } }).select("name description").sort({ name: 1 })
+      : [];
     const assignableUsers = visibleUsers
       .map((person) => {
         const serializedPerson = { ...person._doc };
@@ -240,6 +292,8 @@ const getAssignableUsers = async (req, res) => {
     res.json({
       currentUser,
       canCreateAssignedTasks: await canCreateAssignableTasksForUser(req.user),
+      canCreateGroupTasks: manageableGroups.length > 0,
+      manageableGroups,
       assignableUsers,
     });
   } catch (error) {
@@ -257,6 +311,7 @@ const getTasks = async (req, res) => {
     const scopedFilter = await buildTaskVisibilityFilter(req.user, filter);
     let tasks = await Task.find(scopedFilter)
       .populate("assignedTo", "name email profileImageUrl role founderTitle jobTitle group")
+      .populate("group", "name description")
       .populate("createdBy", "name email")
       .sort({ createdAt: -1 });
 
@@ -289,6 +344,7 @@ const getTaskById = async (req, res) => {
   try {
     const task = await Task.findById(req.params.id)
       .populate("assignedTo", "name email profileImageUrl role founderTitle jobTitle group")
+      .populate("group", "name description")
       .populate("createdBy", "name email role");
 
     if (!task) {
@@ -307,8 +363,8 @@ const getTaskById = async (req, res) => {
 
 const createTask = async (req, res) => {
   try {
-    const { title, description, priority, dueDate, assignedTo, attachments, todoChecklist, taskType = "assigned" } = req.body;
-    const { error, normalizedAssignedTo } = await validateAssignableUsers(req.user, assignedTo, taskType);
+    const { title, description, priority, dueDate, assignedTo, attachments, todoChecklist, taskType = "assigned", group: groupId } = req.body;
+    const { error, normalizedAssignedTo, normalizedGroupId } = await validateAssignableUsers(req.user, assignedTo, taskType, groupId);
     if (error) {
       return res.status(400).json({ message: error });
     }
@@ -319,6 +375,7 @@ const createTask = async (req, res) => {
       priority,
       dueDate,
       assignedTo: normalizedAssignedTo,
+      group: normalizedGroupId,
       assignedAt: new Date(),
       createdBy: req.user._id,
       taskType,
@@ -347,13 +404,15 @@ const updateTask = async (req, res) => {
       const { error, normalizedAssignedTo } = await validateAssignableUsers(
         req.user,
         req.body.assignedTo || task.assignedTo.map((id) => id.toString()),
-        req.body.taskType || task.taskType
+        req.body.taskType || task.taskType,
+        req.body.group || task.group
       );
       if (error) {
         return res.status(400).json({ message: error });
       }
       task.assignedTo = normalizedAssignedTo;
       task.taskType = req.body.taskType || task.taskType;
+      task.group = normalizedGroupId;
       task.assignedAt = new Date();
     }
 
@@ -496,7 +555,8 @@ const getDashboardData = async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(10)
       .populate("assignedTo", "name")
-      .select("title status priority dueDate createdAt assignedAt assignedTo taskType progress todoChecklist");
+      .populate("group", "name")
+      .select("title status priority dueDate createdAt assignedAt assignedTo taskType progress todoChecklist group");
 
     const visibleUsers = await getVisibleUsers(req.user);
 
@@ -558,6 +618,7 @@ const getUserDashboardData = async (req, res) => {
 
     const teamTasks = leaderView
       ? await Task.find(scope).populate("assignedTo", "name email profileImageUrl role rank")
+          .populate("group", "name")
       : [];
 
     const recentTasks = await Task.find(scope)
@@ -565,7 +626,8 @@ const getUserDashboardData = async (req, res) => {
       .limit(12)
       .populate("assignedTo", "name email profileImageUrl")
       .populate("createdBy", "name role")
-      .select("title status priority dueDate createdAt assignedAt assignedTo createdBy progress todoChecklist description");
+      .populate("group", "name")
+      .select("title status priority dueDate createdAt assignedAt assignedTo createdBy progress todoChecklist description group taskType");
 
     const visibleUsers = await getVisibleUsers(req.user);
     const hierarchyUsers = visibleUsers

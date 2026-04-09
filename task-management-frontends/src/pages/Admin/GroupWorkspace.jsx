@@ -7,12 +7,6 @@ import axiosInstance from "../../utils/axiosInstance"
 import { API_PATHS } from "../../utils/apiPaths"
 import { useAuth } from "../../context/auth-context"
 
-const policyLabels = {
-  admin_only: "Only admin can add members",
-  group_admins: "Group admins can add members",
-  all_members: "Any group member can add members",
-}
-
 const GroupWorkspace = () => {
   const { id } = useParams()
   const { user, isAdmin } = useAuth()
@@ -27,6 +21,7 @@ const GroupWorkspace = () => {
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const canCreateGroupTask = isAdmin || (group?.admins || []).some((admin) => admin._id === user?._id)
 
   useEffect(() => {
     fetchGroupWorkspace()
@@ -182,20 +177,16 @@ const GroupWorkspace = () => {
                 />
               </div>
 
-              <div>
-                <label>Who can add members?</label>
-                <select
-                  className="input"
-                  value={group.memberAddPolicy}
-                  disabled={!isAdmin}
-                  onChange={(e) => handleGroupSettingChange("memberAddPolicy", e.target.value)}
-                >
-                  {Object.entries(policyLabels).map(([key, label]) => (
-                    <option key={key} value={key}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
+              <div
+                style={{
+                  padding: "0.85rem 1rem",
+                  borderRadius: "14px",
+                  background: "rgba(59,130,246,0.06)",
+                  color: "var(--text-light)",
+                  fontSize: "0.92rem",
+                }}
+              >
+                Super admin and this group’s admins can add members to the group.
               </div>
 
               <div>
@@ -283,7 +274,14 @@ const GroupWorkspace = () => {
             </div>
 
             <div className="card">
-              <h2 style={{ fontSize: "1.2rem", fontWeight: 700, marginBottom: "1rem" }}>Group Tasks</h2>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap" }}>
+                <h2 style={{ fontSize: "1.2rem", fontWeight: 700 }}>Group Tasks</h2>
+                {canCreateGroupTask && (
+                  <Link to={`/tasks/create?taskType=group&groupId=${group._id}`} className="btn btn-primary">
+                    Create Group Task
+                  </Link>
+                )}
+              </div>
               <div style={{ display: "grid", gap: "0.75rem" }}>
                 {tasks.map((task) => (
                   <Link
@@ -303,6 +301,11 @@ const GroupWorkspace = () => {
                       <strong>{task.title}</strong>
                       <span className="badge badge-progress">{task.status}</span>
                     </div>
+                    {task.taskType === "group" && task.group?.name && (
+                      <div style={{ color: "var(--text-light)" }}>
+                        Group task for {task.group.name}
+                      </div>
+                    )}
                     <div style={{ color: "var(--text-light)" }}>
                       Assigned: {task.assignedTo?.map((person) => person.name).join(", ") || "Unassigned"}
                     </div>

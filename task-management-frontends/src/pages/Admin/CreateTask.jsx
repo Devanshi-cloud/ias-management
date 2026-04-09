@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import Navbar from "../../components/Navbar"
 import axiosInstance from "../../utils/axiosInstance"
 import { API_PATHS } from "../../utils/apiPaths"
@@ -13,6 +13,8 @@ const CreateTask = () => {
   const { user, isAdmin, canManageTasks } = useAuth()
   const [users, setUsers] = useState([])
   const [canCreateAssignedTasks, setCanCreateAssignedTasks] = useState(false)
+  const [canCreateGroupTasks, setCanCreateGroupTasks] = useState(false)
+  const [manageableGroups, setManageableGroups] = useState([])
   const [formData, setFormData] = useState({
     taskType: "personal",
     title: "",
@@ -20,6 +22,7 @@ const CreateTask = () => {
     priority: "Medium",
     dueDate: "",
     assignedTo: [],
+    group: "",
     attachments: "",
     todoChecklist: [],
   })
@@ -30,6 +33,7 @@ const CreateTask = () => {
   const [loading, setLoading] = useState(false)
 
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
 
   useEffect(() => {
     fetchAssignableUsers()
@@ -40,9 +44,23 @@ const CreateTask = () => {
       const response = await axiosInstance.get(API_PATHS.GET_ASSIGNABLE_USERS)
       setUsers(response.data.assignableUsers || [])
       setCanCreateAssignedTasks(!!response.data.canCreateAssignedTasks)
-      if (response.data.canCreateAssignedTasks) {
-        setFormData((prev) => ({ ...prev, taskType: prev.taskType || "assigned" }))
-      }
+      setCanCreateGroupTasks(!!response.data.canCreateGroupTasks)
+      setManageableGroups(response.data.manageableGroups || [])
+      const preferredTaskType = searchParams.get("taskType")
+      const preferredGroupId = searchParams.get("groupId")
+      setFormData((prev) => ({
+        ...prev,
+        taskType:
+          preferredTaskType === "group" && response.data.canCreateGroupTasks
+            ? "group"
+            : response.data.canCreateAssignedTasks
+              ? prev.taskType || "assigned"
+              : prev.taskType,
+        group:
+          preferredTaskType === "group" && preferredGroupId
+            ? preferredGroupId
+            : prev.group,
+      }))
     } catch (error) {
       console.error("Error fetching users:", error)
     }
@@ -52,7 +70,15 @@ const CreateTask = () => {
     const { name, value } = e.target
     setFormData((prev) => {
       if (name === "taskType" && value === "personal") {
-        return { ...prev, taskType: value, assignedTo: [] }
+        setSelectedUsers([])
+        return { ...prev, taskType: value, assignedTo: [], group: "" }
+      }
+      if (name === "taskType" && value === "group") {
+        setSelectedUsers([])
+        return { ...prev, taskType: value, assignedTo: [], group: prev.group || "" }
+      }
+      if (name === "taskType" && value === "assigned") {
+        return { ...prev, taskType: value, group: "" }
       }
       return { ...prev, [name]: value }
     })
@@ -104,12 +130,21 @@ const CreateTask = () => {
       return
     }
 
+    if (formData.taskType === "group" && !formData.group) {
+      setError("Please select a group for this task")
+      return
+    }
+
     setLoading(true)
 
     try {
       await axiosInstance.post(API_PATHS.CREATE_TASK, formData)
       setSuccess("Task created successfully!")
       setTimeout(() => {
+        if (formData.taskType === "group" && formData.group) {
+          navigate(`/admin/groups/${formData.group}`)
+          return
+        }
         navigate(canManageTasks ? "/admin/manage-tasks" : "/user/my-tasks")
       }, 1500)
     } catch (err) {
@@ -140,9 +175,10 @@ const CreateTask = () => {
               >
                 <option value="personal">Personal Task</option>
                 {canCreateAssignedTasks && <option value="assigned">Assigned Task</option>}
+                {canCreateGroupTasks && <option value="group">Group Task</option>}
               </select>
               <small style={{ color: "var(--text-light)", fontSize: "0.75rem" }}>
-                Personal tasks stay with you. Assigned tasks can be shared with teammates available to your workspace level.
+                Personal tasks stay with you. Assigned tasks go to selected teammates. Group tasks go to every member of a selected group.
               </small>
             </div>
 
@@ -206,6 +242,29 @@ const CreateTask = () => {
                 />
               </div>
             </div>
+
+            {formData.taskType === "group" && (
+            <div className="form-group">
+              <label htmlFor="group">Select Group *</label>
+              <select
+                id="group"
+                name="group"
+                className="input"
+                value={formData.group}
+                onChange={handleChange}
+              >
+                <option value="">Choose a group</option>
+                {manageableGroups.map((group) => (
+                  <option key={group._id} value={group._id}>
+                    {group.name}
+                  </option>
+                ))}
+              </select>
+              <small style={{ color: "var(--text-light)", fontSize: "0.75rem", marginTop: "0.5rem", display: "block" }}>
+                This task will be visible to the whole group and assigned to its current members.
+              </small>
+            </div>
+            )}
 
             {formData.taskType === "assigned" && (
             <div className="form-group">

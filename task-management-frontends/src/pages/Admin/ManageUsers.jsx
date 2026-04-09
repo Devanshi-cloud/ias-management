@@ -229,13 +229,7 @@ const ManageUsers = () => {
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem" }}>
                     <div style={{ fontWeight: 700 }}>{group.name}</div>
-                    <span className="badge badge-progress">
-                      {group.memberAddPolicy === "all_members"
-                        ? "All members"
-                        : group.memberAddPolicy === "group_admins"
-                          ? "Group admins"
-                          : "Admin only"}
-                    </span>
+                    <span className="badge badge-progress">Members only</span>
                   </div>
                   <div style={{ color: "var(--text-light)", fontSize: "0.9rem", marginTop: "0.3rem" }}>
                     {group.description || "No description yet"}

@@ -2,7 +2,7 @@ const Group = require("../models/Group");
 const Task = require("../models/Task");
 const Message = require("../models/Message");
 const User = require("../models/User");
-const { canManageUsers, canManageGroups, isAdmin, isMemberOfGroup } = require("../utils/access");
+const { isAdmin, isMemberOfGroup } = require("../utils/access");
 
 const populateGroup = (query) => query.populate("admins", "name email role founderTitle jobTitle");
 
@@ -17,20 +17,28 @@ const canViewGroup = (group, user) => {
 };
 
 const canAddMembersToGroup = (group, user) => {
-  if (isAdmin(user)) return true;
-  if (!canViewGroup(group, user)) return false;
-  if (group.memberAddPolicy === "all_members") return true;
-  if (group.memberAddPolicy === "group_admins") return isGroupAdmin(group, user._id);
-  return false;
+  return isAdmin(user) || isGroupAdmin(group, user?._id);
 };
 
 const listGroups = async (req, res) => {
   try {
-    if (!isAdmin(req.user) && !canManageGroups(req.user) && !canManageUsers(req.user)) {
-      return res.status(403).json({ message: "Not authorized to view groups" });
+    if (isAdmin(req.user)) {
+      const groups = await populateGroup(Group.find()).sort({ name: 1 });
+      return res.json(groups);
     }
 
-    const groups = await populateGroup(Group.find()).sort({ name: 1 });
+    const userGroupIds = Array.isArray(req.user?.groups)
+      ? req.user.groups.map((group) => group?._id?.toString?.() || group?.toString?.() || String(group)).filter(Boolean)
+      : [];
+
+    const groups = await populateGroup(
+      Group.find({
+        $or: [
+          { _id: { $in: userGroupIds } },
+          { admins: req.user._id },
+        ],
+      }),
+    ).sort({ name: 1 });
     res.json(groups);
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
@@ -84,8 +92,14 @@ const getGroupDetail = async (req, res) => {
       .sort({ name: 1 });
 
     const memberIds = members.map((member) => member._id);
-    const tasks = await Task.find({ assignedTo: { $in: memberIds } })
+    const tasks = await Task.find({
+      $or: [
+        { group: group._id },
+        { assignedTo: { $in: memberIds } },
+      ],
+    })
       .populate("assignedTo", "name email profileImageUrl role founderTitle jobTitle")
+      .populate("group", "name description")
       .populate("createdBy", "name email")
       .sort({ updatedAt: -1 });
 
