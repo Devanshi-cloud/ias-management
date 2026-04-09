@@ -35,6 +35,7 @@ const GroupWorkspace = () => {
   const fetchGroupWorkspace = async () => {
     try {
       setLoading(true)
+      setError("")
       const groupResponse = await axiosInstance.get(API_PATHS.GET_GROUP_DETAIL(id))
 
       setGroup(groupResponse.data.group)
@@ -122,7 +123,7 @@ const GroupWorkspace = () => {
       <>
         <Navbar />
         <div className="container">
-          <p>Group not found.</p>
+          <p>{error || "Group not found."}</p>
         </div>
       </>
     )

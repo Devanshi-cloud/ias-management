@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const { isAdmin } = require("../utils/access");
 
 // Middleware to protect routes
 const protect = async (req, res, next) => {
@@ -12,6 +13,10 @@ const protect = async (req, res, next) => {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
       req.user = await User.findById(decoded.id).select("-password");
+      if (req.user) {
+        req.user.lastSeenAt = new Date();
+        await req.user.save();
+      }
 
       next();
     } else {
@@ -24,7 +29,7 @@ const protect = async (req, res, next) => {
 
 // Middleware for Admin-only access
 const adminOnly = (req, res, next) => {
-  if (req.user && req.user.role === "admin") {
+  if (req.user && isAdmin(req.user)) {
     next();
   } else {
     res.status(403).json({ message: "Access denied, admin only" });

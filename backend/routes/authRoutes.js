@@ -4,7 +4,10 @@ const express = require("express");
 const {
   registerUser,
   loginUser,
+  requestPasswordReset,
   getUserProfile,
+  updatePresenceHeartbeat,
+  updateAvailabilityStatus,
   updateUserProfile,
 } = require("../controllers/authController");
 const { protect } = require("../middlewares/authMiddleware");
@@ -22,8 +25,13 @@ router.post("/register", registerUser);
 // Login user
 router.post("/login", loginUser);
 
+// Request password reset from admin
+router.post("/forgot-password", requestPasswordReset);
+
 // Get user profile (requires authentication)
 router.get("/profile", protect, getUserProfile);
+router.post("/presence", protect, updatePresenceHeartbeat);
+router.put("/status", protect, updateAvailabilityStatus);
 
 // Update user profile (requires authentication)
 router.put("/profile", protect, updateUserProfile);

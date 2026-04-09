@@ -1,22 +1,26 @@
 const express = require("express");
-const { protect, adminOnly, authorize } = require("../middlewares/authMiddleware");
-const { getUsers, getUserById, updateUser, deleteUser } = require("../controllers/userController");
+const { protect } = require("../middlewares/authMiddleware");
+const {
+  getUsers,
+  getUserById,
+  updateUser,
+  adminResetUserPassword,
+  deleteUser,
+} = require("../controllers/userController");
 const upload = require("../middlewares/uploadMiddleware");
 
 const router = express.Router();
 
 // User Management Routes
-// Get all users (Admin, VP, Head)
-router.get("/", protect, authorize(['admin', 'vp', 'head']), getUsers);
+router.get("/", protect, getUsers);
 
 // Get a specific user
 router.get("/:id", protect, getUserById);
 
-// Update a user's profile
-router.put("/:id", protect, authorize(['admin', 'vp', 'head', 'member']), upload.single("profileImage"), updateUser);
+router.put("/:id", protect, upload.single("profileImage"), updateUser);
 
+router.put("/:id/reset-password", protect, adminResetUserPassword);
 
-// Delete a user
-router.delete("/:id", protect, authorize(['admin', 'vp', 'head']), deleteUser);
+router.delete("/:id", protect, deleteUser);
 
 module.exports = router;

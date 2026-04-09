@@ -61,6 +61,12 @@ const Navbar = () => {
                   <MessageSquare size={18} style={{ display: "inline", marginRight: "0.25rem" }} />
                   Chats
                 </Link>
+                {user?.groups?.[0]?._id && (
+                  <Link to={`/admin/groups/${user.groups[0]._id}`} className="navbar-link">
+                    <Layers3 size={18} style={{ display: "inline", marginRight: "0.25rem" }} />
+                    My Groups
+                  </Link>
+                )}
               </>
             )}
             {(canManageUsers || canManageGroups) && (
@@ -177,7 +183,7 @@ const Navbar = () => {
               </div>
 
               <Link
-                to={showManagerArea ? "/admin/profile" : "/user/profile"}
+                to={isAdmin ? "/admin/profile" : "/user/profile"}
                 style={{
                   display: "flex",
                   alignItems: "center",
