@@ -1,5 +1,6 @@
 const Task = require("../models/Task");
 const User = require("../models/User");
+const Group = require("../models/Group");
 const {
   getUserRank,
   canCreateAssignedTasks,
@@ -9,10 +10,49 @@ const {
   isAdmin,
 } = require("../utils/access");
 
-const getVisibleUsers = async (user) =>
-  User.find(getVisibleUsersQuery(user))
+const getManagedGroupIds = async (user) => {
+  if (!user?._id) return [];
+  const groups = await Group.find({ admins: user._id }).select("_id");
+  return groups.map((group) => group._id.toString());
+};
+
+const canAssignAsGroupAdmin = async (user, target) => {
+  const managedGroupIds = await getManagedGroupIds(user);
+  if (!managedGroupIds.length) return false;
+
+  const targetGroupIds = Array.isArray(target?.groups)
+    ? target.groups.map((group) => normalizeId(group)).filter(Boolean)
+    : [];
+
+  return targetGroupIds.some((groupId) => managedGroupIds.includes(groupId));
+};
+
+const canCreateAssignableTasksForUser = async (user) => {
+  if (canCreateAssignedTasks(user)) return true;
+  const managedGroupIds = await getManagedGroupIds(user);
+  return managedGroupIds.length > 0;
+};
+
+const getVisibleUsers = async (user) => {
+  const rankUsers = await User.find(getVisibleUsersQuery(user))
     .select("name email role rank founderTitle jobTitle profileImageUrl")
     .sort({ rank: 1, name: 1 });
+  const managedGroupIds = await getManagedGroupIds(user);
+  if (!managedGroupIds.length) {
+    return rankUsers;
+  }
+
+  const groupUsers = await User.find({ groups: { $in: managedGroupIds } })
+    .select("name email role rank founderTitle jobTitle profileImageUrl groups")
+    .sort({ rank: 1, name: 1 });
+
+  const usersById = new Map();
+  [...rankUsers, ...groupUsers].forEach((person) => {
+    usersById.set(person._id.toString(), person);
+  });
+
+  return Array.from(usersById.values()).sort((a, b) => getUserRank(a) - getUserRank(b) || a.name.localeCompare(b.name));
+};
 
 const normalizeId = (value) => {
   if (!value) return "";
@@ -146,7 +186,7 @@ const validateAssignableUsers = async (user, assignedTo, taskType = "assigned") 
     return { normalizedAssignedTo: [user._id.toString()] };
   }
 
-  if (!canCreateAssignedTasks(user)) {
+  if (!(await canCreateAssignableTasksForUser(user))) {
     return { error: "Your rank can only create personal tasks" };
   }
 
@@ -159,9 +199,17 @@ const validateAssignableUsers = async (user, assignedTo, taskType = "assigned") 
     return { error: "One or more assignees were not found" };
   }
 
-  const invalidTarget = targets.find((target) => !canAssignFromTo(user, target) || target._id.toString() === user._id.toString());
+  const invalidTargetChecks = await Promise.all(
+    targets.map(async (target) => ({
+      target,
+      allowed:
+        target._id.toString() !== user._id.toString() &&
+        (canAssignFromTo(user, target) || (await canAssignAsGroupAdmin(user, target))),
+    })),
+  );
+  const invalidTarget = invalidTargetChecks.find((item) => !item.allowed)?.target;
   if (invalidTarget) {
-    return { error: "You can assign tasks only to teammates at your level or below" };
+    return { error: "You can assign tasks only to teammates in your allowed level or managed groups" };
   }
 
   return { normalizedAssignedTo: targets.map((target) => target._id.toString()) };
@@ -191,7 +239,7 @@ const getAssignableUsers = async (req, res) => {
 
     res.json({
       currentUser,
-      canCreateAssignedTasks: canCreateAssignedTasks(req.user),
+      canCreateAssignedTasks: await canCreateAssignableTasksForUser(req.user),
       assignableUsers,
     });
   } catch (error) {
@@ -330,7 +378,7 @@ const deleteTask = async (req, res) => {
       return res.status(404).json({ message: "Task not found" });
     }
 
-    if (task.taskType !== "personal" && !canCreateAssignedTasks(req.user) && task.createdBy?.toString() !== req.user._id.toString()) {
+    if (task.taskType !== "personal" && !(await canCreateAssignableTasksForUser(req.user)) && task.createdBy?.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: "Not authorized to delete tasks" });
     }
 
@@ -484,7 +532,7 @@ const getDepartmentDashboardData = async (req, res) => getDashboardData(req, res
 
 const getUserDashboardData = async (req, res) => {
   try {
-    const leaderView = canCreateAssignedTasks(req.user);
+    const leaderView = await canCreateAssignableTasksForUser(req.user);
     const scope = leaderView ? await buildTaskVisibilityFilter(req.user) : { assignedTo: req.user._id };
 
     const totalTasks = await Task.countDocuments(scope);
