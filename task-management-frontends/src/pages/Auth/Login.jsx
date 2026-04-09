@@ -2,7 +2,9 @@
 
 import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { useAuth } from "../../context/AuthContext"
+import { useAuth } from "../../context/auth-context"
+import axiosInstance from "../../utils/axiosInstance"
+import { API_PATHS } from "../../utils/apiPaths"
 import { LogIn } from "lucide-react"
 
 const Login = () => {
@@ -11,9 +13,14 @@ const Login = () => {
     password: "",
   })
   const [error, setError] = useState("")
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState("")
+  const [forgotPasswordMessage, setForgotPasswordMessage] = useState("")
+  const [forgotPasswordError, setForgotPasswordError] = useState("")
+  const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false)
+  const [showForgotPassword, setShowForgotPassword] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  const { login, isAdmin } = useAuth()
+  const { login } = useAuth()
   const navigate = useNavigate()
 
   const handleChange = (e) => {
@@ -28,7 +35,14 @@ const Login = () => {
     try {
       const userData = await login(formData.email, formData.password)
       // Redirect based on role
-      if (userData.role === "admin") {
+      if (
+        userData.role === "admin" ||
+        userData.role === "founder" ||
+        userData.role === "team_lead" ||
+        userData.permissions?.manageTasks ||
+        userData.permissions?.manageUsers ||
+        userData.permissions?.manageGroups
+      ) {
         navigate("/admin/dashboard")
       } else {
         navigate("/user/dashboard")
@@ -37,6 +51,25 @@ const Login = () => {
       setError(err.response?.data?.message || "Login failed. Please try again.")
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault()
+    setForgotPasswordError("")
+    setForgotPasswordMessage("")
+    setForgotPasswordLoading(true)
+
+    try {
+      const response = await axiosInstance.post(API_PATHS.FORGOT_PASSWORD, {
+        email: forgotPasswordEmail,
+      })
+      setForgotPasswordMessage(response.data.message)
+      setForgotPasswordEmail("")
+    } catch (err) {
+      setForgotPasswordError(err.response?.data?.message || "Failed to send reset request.")
+    } finally {
+      setForgotPasswordLoading(false)
     }
   }
 
@@ -80,6 +113,28 @@ const Login = () => {
             />
           </div>
 
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "-0.25rem", marginBottom: "0.75rem" }}>
+            <button
+              type="button"
+              onClick={() => {
+                setShowForgotPassword((prev) => !prev)
+                setForgotPasswordError("")
+                setForgotPasswordMessage("")
+                setForgotPasswordEmail(formData.email)
+              }}
+              style={{
+                border: "none",
+                background: "transparent",
+                color: "var(--primary)",
+                cursor: "pointer",
+                fontWeight: "600",
+                padding: 0,
+              }}
+            >
+              Forgot password?
+            </button>
+          </div>
+
           {error && <div className="error-message">{error}</div>}
 
           <button
@@ -91,6 +146,50 @@ const Login = () => {
             {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
+
+        {showForgotPassword && (
+          <div
+            style={{
+              marginTop: "1.5rem",
+              padding: "1rem",
+              border: "1px solid var(--border)",
+              borderRadius: "12px",
+              backgroundColor: "var(--surface, #fff)",
+            }}
+          >
+            <h3 style={{ marginBottom: "0.5rem", color: "var(--text)" }}>Request password reset</h3>
+            <p style={{ color: "var(--text-light)", fontSize: "0.9rem", marginBottom: "1rem" }}>
+              This sends a request to the admin console so an admin can set a new password for you.
+            </p>
+            <form onSubmit={handleForgotPassword}>
+              <div className="form-group">
+                <label htmlFor="forgotPasswordEmail">Email</label>
+                <input
+                  type="email"
+                  id="forgotPasswordEmail"
+                  name="forgotPasswordEmail"
+                  className="input"
+                  value={forgotPasswordEmail}
+                  onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                  required
+                  placeholder="Enter your account email"
+                />
+              </div>
+
+              {forgotPasswordError && <div className="error-message">{forgotPasswordError}</div>}
+              {forgotPasswordMessage && <div className="success-message">{forgotPasswordMessage}</div>}
+
+              <button
+                type="submit"
+                className="btn btn-secondary"
+                style={{ width: "100%" }}
+                disabled={forgotPasswordLoading}
+              >
+                {forgotPasswordLoading ? "Sending request..." : "Send Reset Request"}
+              </button>
+            </form>
+          </div>
+        )}
 
         <p style={{ textAlign: "center", marginTop: "1.5rem", color: "var(--text-light)" }}>
           Don't have an account?{" "}

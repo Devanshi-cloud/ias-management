@@ -1,18 +1,9 @@
 "use client"
 
-import { createContext, useState, useContext, useEffect } from "react"
+import { useState, useEffect } from "react"
 import axiosInstance from "../utils/axiosInstance"
 import { API_PATHS } from "../utils/apiPaths"
-
-const AuthContext = createContext(null)
-
-export const useAuth = () => {
-  const context = useContext(AuthContext)
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider")
-  }
-  return context
-}
+import { AuthContext } from "./auth-context"
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
@@ -26,6 +17,18 @@ export const AuthProvider = ({ children }) => {
     }
     setLoading(false)
   }, [])
+
+  useEffect(() => {
+    if (!user?.token) return undefined
+
+    const heartbeat = () => {
+      axiosInstance.post(API_PATHS.PRESENCE_HEARTBEAT).catch(() => {})
+    }
+
+    heartbeat()
+    const intervalId = window.setInterval(heartbeat, 60000)
+    return () => window.clearInterval(intervalId)
+  }, [user?.token])
 
   const login = async (email, password) => {
     try {
@@ -72,6 +75,11 @@ export const AuthProvider = ({ children }) => {
     loading,
     isAuthenticated: !!user,
     isAdmin: user?.role === "admin",
+    isFounder: user?.role === "founder",
+    isTeamLead: user?.role === "team_lead",
+    canManageUsers: user?.role === "admin" || !!user?.permissions?.manageUsers,
+    canManageTasks: user?.role === "admin" || user?.role === "founder" || user?.role === "team_lead" || !!user?.permissions?.manageTasks,
+    canManageGroups: user?.role === "admin" || !!user?.permissions?.manageGroups,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

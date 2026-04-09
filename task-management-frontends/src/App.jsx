@@ -12,6 +12,8 @@ import CreateTask from "./pages/Admin/CreateTask"
 import ManageTasks from "./pages/Admin/ManageTasks"
 import ManageUsers from "./pages/Admin/ManageUsers"
 import EditTask from "./pages/Admin/EditTask"
+import GroupWorkspace from "./pages/Admin/GroupWorkspace"
+import Chats from "./pages/Chats/Chats"
 
 // User Pages
 import UserDashboard from "./pages/User/UserDashboard"
@@ -34,7 +36,7 @@ function App() {
           <Route
             path="/admin/dashboard"
             element={
-              <PrivateRoute role="admin">
+              <PrivateRoute permission="manageTasks">
                 <AdminDashboard />
               </PrivateRoute>
             }
@@ -42,7 +44,15 @@ function App() {
           <Route
             path="/admin/create-task"
             element={
-              <PrivateRoute role="admin">
+              <PrivateRoute>
+                <CreateTask />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/tasks/create"
+            element={
+              <PrivateRoute>
                 <CreateTask />
               </PrivateRoute>
             }
@@ -50,7 +60,7 @@ function App() {
           <Route
             path="/admin/manage-tasks"
             element={
-              <PrivateRoute role="admin">
+              <PrivateRoute permission="manageTasks">
                 <ManageTasks />
               </PrivateRoute>
             }
@@ -58,15 +68,23 @@ function App() {
           <Route
             path="/admin/manage-users"
             element={
-              <PrivateRoute role="admin">
+              <PrivateRoute permission={["manageUsers", "manageGroups"]}>
                 <ManageUsers />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/groups/:id"
+            element={
+              <PrivateRoute>
+                <GroupWorkspace />
               </PrivateRoute>
             }
           />
           <Route
             path="/admin/edit-task/:id"
             element={
-              <PrivateRoute role="admin">
+              <PrivateRoute permission="manageTasks">
                 <EditTask />
               </PrivateRoute>
             }
@@ -74,7 +92,7 @@ function App() {
           <Route
             path="/admin/task/:id"
             element={
-              <PrivateRoute role="admin">
+              <PrivateRoute permission="manageTasks">
                 <ViewTaskDetail />
               </PrivateRoute>
             }
@@ -84,6 +102,14 @@ function App() {
             element={
               <PrivateRoute role="admin">
                 <UserProfile />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/chats"
+            element={
+              <PrivateRoute>
+                <Chats />
               </PrivateRoute>
             }
           />

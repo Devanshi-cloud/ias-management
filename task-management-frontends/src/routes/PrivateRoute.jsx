@@ -1,9 +1,9 @@
 "use client"
 import { Navigate } from "react-router-dom"
-import { useAuth } from "../context/AuthContext"
+import { useAuth } from "../context/auth-context"
 
-const PrivateRoute = ({ children, role }) => {
-  const { user, loading } = useAuth()
+const PrivateRoute = ({ children, role, permission }) => {
+  const { user, loading, canManageTasks, canManageUsers, canManageGroups } = useAuth()
 
   if (loading) {
     return (
@@ -23,6 +23,19 @@ const PrivateRoute = ({ children, role }) => {
 
   if (role === "member" && user.role === "admin") {
     return <Navigate to="/admin/dashboard" replace />
+  }
+
+  if (permission) {
+    const requiredPermissions = Array.isArray(permission) ? permission : [permission]
+    const permissionMap = {
+      manageTasks: canManageTasks,
+      manageUsers: canManageUsers,
+      manageGroups: canManageGroups,
+    }
+    const hasPermission = user.role === "admin" || requiredPermissions.some((item) => permissionMap[item])
+    if (!hasPermission) {
+      return <Navigate to="/user/dashboard" replace />
+    }
   }
 
   return children

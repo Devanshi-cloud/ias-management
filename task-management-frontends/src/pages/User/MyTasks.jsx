@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { Link } from "react-router-dom"
 import Navbar from "../../components/Navbar"
 import TaskCard from "../../components/TaskCard"
 import axiosInstance from "../../utils/axiosInstance"
@@ -52,7 +53,12 @@ const MyTasks = () => {
     <>
       <Navbar />
       <div className="container">
-        <h1 style={{ fontSize: "2rem", fontWeight: "700", marginBottom: "2rem", color: "var(--text)" }}>My Tasks</h1>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem", alignItems: "center", marginBottom: "2rem", flexWrap: "wrap" }}>
+          <h1 style={{ fontSize: "2rem", fontWeight: "700", color: "var(--text)" }}>My Tasks</h1>
+          <Link to="/tasks/create" className="btn btn-primary">
+            Add Task
+          </Link>
+        </div>
 
         {/* Filter Tabs */}
         <div style={{ display: "flex", gap: "1rem", marginBottom: "2rem", flexWrap: "wrap" }}>

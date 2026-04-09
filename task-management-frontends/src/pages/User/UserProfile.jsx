@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import Navbar from "../../components/Navbar"
-import { useAuth } from "../../context/AuthContext"
+import { useAuth } from "../../context/auth-context"
 import axiosInstance from "../../utils/axiosInstance"
 import { API_PATHS } from "../../utils/apiPaths"
 import { Upload, User as UserIcon, Save, Calendar, Briefcase } from "lucide-react"
@@ -16,7 +16,9 @@ const UserProfile = () => {
     name: "",
     email: "",
     birthday: "",
-    iasPosition: "",
+    title: "",
+    availabilityStatus: "available",
+    statusMessage: "",
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
@@ -27,22 +29,15 @@ const UserProfile = () => {
   const [success, setSuccess] = useState("")
   const [loading, setLoading] = useState(false)
 
-  const iasPositions = [
-    "COMMUNICATION",
-    "FINANCE",
-    "DESIGN AND MEDIA",
-    "TECH",
-    "HOSPITALITY",
-    "Other"
-  ]
-
   useEffect(() => {
     if (user) {
       setFormData({
         name: user.name || "",
         email: user.email || "",
         birthday: user.birthday ? new Date(user.birthday).toISOString().split('T')[0] : "",
-        iasPosition: user.iasPosition || "",
+        title: user.role === "founder" ? user.founderTitle || "" : user.jobTitle || "",
+        availabilityStatus: user.availabilityStatus || "available",
+        statusMessage: user.statusMessage || "",
         currentPassword: "",
         newPassword: "",
         confirmPassword: "",
@@ -96,13 +91,20 @@ const UserProfile = () => {
       updateData.append("name", formData.name);
       updateData.append("email", formData.email);
       updateData.append("birthday", formData.birthday || "");
-      updateData.append("iasPosition", formData.iasPosition || "");
+      if (user?.role === "founder") {
+        updateData.append("founderTitle", formData.title || "");
+      } else {
+        updateData.append("jobTitle", formData.title || "");
+      }
+      updateData.append("availabilityStatus", formData.availabilityStatus);
+      updateData.append("statusMessage", formData.statusMessage || "");
 
       if (profileImage) {
         updateData.append("profileImage", profileImage);
       }
 
       if (formData.newPassword) {
+        updateData.append("currentPassword", formData.currentPassword);
         updateData.append("password", formData.newPassword);
       }
 
@@ -231,24 +233,47 @@ const UserProfile = () => {
             </div>
 
             <div className="form-group">
-              <label htmlFor="iasPosition">
+              <label htmlFor="title">
                 <Briefcase size={16} style={{ display: "inline", marginRight: "0.5rem" }} />
-                IAS Position
+                {user?.role === "founder" ? "Founder Title" : "Job Title"}
               </label>
-              <select
-                id="iasPosition"
-                name="iasPosition"
+              <input
+                id="title"
+                name="title"
                 className="input"
-                value={formData.iasPosition}
+                value={formData.title}
                 onChange={handleChange}
-              >
-                <option value="">Select Position</option>
-                {iasPositions.map((position) => (
-                  <option key={position} value={position}>
-                    {position}
-                  </option>
-                ))}
-              </select>
+                placeholder={user?.role === "founder" ? "CEO, CTO, COO..." : "Your job title"}
+              />
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+              <div className="form-group">
+                <label htmlFor="availabilityStatus">Availability</label>
+                <select
+                  id="availabilityStatus"
+                  name="availabilityStatus"
+                  className="input"
+                  value={formData.availabilityStatus}
+                  onChange={handleChange}
+                >
+                  <option value="available">Available</option>
+                  <option value="away">Away</option>
+                  <option value="on_leave">On Leave</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="statusMessage">Status Note</label>
+                <input
+                  id="statusMessage"
+                  name="statusMessage"
+                  className="input"
+                  value={formData.statusMessage}
+                  onChange={handleChange}
+                  placeholder="In meetings, on leave, heads down..."
+                />
+              </div>
             </div>
 
             <hr style={{ margin: "2rem 0", border: "none", borderTop: "1px solid var(--border)" }} />

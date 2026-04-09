@@ -5,12 +5,16 @@ import { useNavigate } from "react-router-dom"
 import Navbar from "../../components/Navbar"
 import axiosInstance from "../../utils/axiosInstance"
 import { API_PATHS } from "../../utils/apiPaths"
+import { useAuth } from "../../context/auth-context"
 import { PlusCircle, Trash2, X } from "lucide-react"
 import { priorityOptions } from "../../utils/data"
 
 const CreateTask = () => {
+  const { user, isAdmin, canManageTasks } = useAuth()
   const [users, setUsers] = useState([])
+  const [canCreateAssignedTasks, setCanCreateAssignedTasks] = useState(false)
   const [formData, setFormData] = useState({
+    taskType: "personal",
     title: "",
     description: "",
     priority: "Medium",
@@ -28,13 +32,17 @@ const CreateTask = () => {
   const navigate = useNavigate()
 
   useEffect(() => {
-    fetchUsers()
+    fetchAssignableUsers()
   }, [])
 
-  const fetchUsers = async () => {
+  const fetchAssignableUsers = async () => {
     try {
-      const response = await axiosInstance.get(API_PATHS.GET_USERS)
-      setUsers(response.data)
+      const response = await axiosInstance.get(API_PATHS.GET_ASSIGNABLE_USERS)
+      setUsers(response.data.assignableUsers || [])
+      setCanCreateAssignedTasks(!!response.data.canCreateAssignedTasks)
+      if (response.data.canCreateAssignedTasks) {
+        setFormData((prev) => ({ ...prev, taskType: prev.taskType || "assigned" }))
+      }
     } catch (error) {
       console.error("Error fetching users:", error)
     }
@@ -42,7 +50,12 @@ const CreateTask = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target
-    setFormData({ ...formData, [name]: value })
+    setFormData((prev) => {
+      if (name === "taskType" && value === "personal") {
+        return { ...prev, taskType: value, assignedTo: [] }
+      }
+      return { ...prev, [name]: value }
+    })
   }
 
   const handleUserToggle = (userId) => {
@@ -86,7 +99,7 @@ const CreateTask = () => {
     setError("")
     setSuccess("")
 
-    if (formData.assignedTo.length === 0) {
+    if (formData.taskType === "assigned" && formData.assignedTo.length === 0) {
       setError("Please assign the task to at least one user")
       return
     }
@@ -97,7 +110,7 @@ const CreateTask = () => {
       await axiosInstance.post(API_PATHS.CREATE_TASK, formData)
       setSuccess("Task created successfully!")
       setTimeout(() => {
-        navigate("/admin/manage-tasks")
+        navigate(canManageTasks ? "/admin/manage-tasks" : "/user/my-tasks")
       }, 1500)
     } catch (err) {
       setError(err.response?.data?.message || "Failed to create task")
@@ -111,11 +124,28 @@ const CreateTask = () => {
       <Navbar />
       <div className="container">
         <h1 style={{ fontSize: "2rem", fontWeight: "700", marginBottom: "2rem", color: "var(--text)" }}>
-          Create New Task
+          Create Task
         </h1>
 
         <div className="card" style={{ maxWidth: "800px", margin: "0 auto" }}>
           <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label htmlFor="taskType">Task Type</label>
+              <select
+                id="taskType"
+                name="taskType"
+                className="input"
+                value={formData.taskType}
+                onChange={handleChange}
+              >
+                <option value="personal">Personal Task</option>
+                {canCreateAssignedTasks && <option value="assigned">Assigned Task</option>}
+              </select>
+              <small style={{ color: "var(--text-light)", fontSize: "0.75rem" }}>
+                Personal tasks stay with you. Assigned tasks can be shared with teammates available to your workspace level.
+              </small>
+            </div>
+
             <div className="form-group">
               <label htmlFor="title">Task Title *</label>
               <input
@@ -177,8 +207,9 @@ const CreateTask = () => {
               </div>
             </div>
 
+            {formData.taskType === "assigned" && (
             <div className="form-group">
-              <label>Assign To * (Select multiple users)</label>
+              <label>Assign To *</label>
               
               {/* Selected Users Display */}
               {selectedUsers.length > 0 && (
@@ -234,11 +265,11 @@ const CreateTask = () => {
                 borderRadius: "0.375rem",
                 padding: "0.5rem"
               }}>
-                {users.map((user) => {
-                  const isSelected = selectedUsers.some(u => u._id === user._id)
+                {users.map((assignableUser) => {
+                  const isSelected = selectedUsers.some(u => u._id === assignableUser._id)
                   return (
                     <label
-                      key={user._id}
+                      key={assignableUser._id}
                       style={{
                         display: "flex",
                         alignItems: "center",
@@ -259,14 +290,14 @@ const CreateTask = () => {
                       <input
                         type="checkbox"
                         checked={isSelected}
-                        onChange={() => handleUserToggle(user._id)}
+                        onChange={() => handleUserToggle(assignableUser._id)}
                         style={{ cursor: "pointer" }}
                       />
                       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flex: 1 }}>
-                        {user.profileImageUrl ? (
+                        {assignableUser.profileImageUrl ? (
                           <img
-                            src={user.profileImageUrl}
-                            alt={user.name}
+                            src={assignableUser.profileImageUrl}
+                            alt={assignableUser.name}
                             style={{ width: "32px", height: "32px", borderRadius: "50%", objectFit: "cover" }}
                           />
                         ) : (
@@ -284,12 +315,15 @@ const CreateTask = () => {
                               fontWeight: "600"
                             }}
                           >
-                            {user.name.charAt(0).toUpperCase()}
+                              {assignableUser.name.charAt(0).toUpperCase()}
                           </div>
                         )}
                         <div>
-                          <div style={{ fontWeight: "500" }}>{user.name}</div>
-                          <div style={{ fontSize: "0.75rem", color: "var(--text-light)" }}>{user.email}</div>
+                          <div style={{ fontWeight: "500" }}>{assignableUser.name}</div>
+                          <div style={{ fontSize: "0.75rem", color: "var(--text-light)" }}>
+                            {assignableUser.email}
+                            {isAdmin && assignableUser.rank ? ` · Rank ${assignableUser.rank}` : ""}
+                          </div>
                         </div>
                       </div>
                     </label>
@@ -297,9 +331,10 @@ const CreateTask = () => {
                 })}
               </div>
               <small style={{ color: "var(--text-light)", fontSize: "0.75rem", marginTop: "0.5rem", display: "block" }}>
-                Select one or more users to assign this task
+                Select one or more teammates for this task
               </small>
             </div>
+            )}
 
             <div className="form-group">
               <label htmlFor="attachments">Attachments URL</label>

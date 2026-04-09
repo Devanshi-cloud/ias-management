@@ -1,11 +1,11 @@
 "use client"
 import { Link, useNavigate } from "react-router-dom"
-import { useAuth } from "../context/AuthContext"
-import { LogOut, User, LayoutDashboard, ListTodo, Users, PlusCircle, UserCircle } from "lucide-react"
+import { useAuth } from "../context/auth-context"
+import { LogOut, User, LayoutDashboard, ListTodo, Users, PlusCircle, UserCircle, Layers3, MessageSquare } from "lucide-react"
 import { useState, useRef, useEffect } from "react"
 
 const Navbar = () => {
-  const { user, logout, isAdmin } = useAuth()
+  const { user, logout, isAdmin, canManageTasks, canManageUsers, canManageGroups } = useAuth()
   const navigate = useNavigate()
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const menuRef = useRef(null)
@@ -27,36 +27,48 @@ const Navbar = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
+  const showManagerArea = canManageTasks || canManageUsers || canManageGroups
+
   return (
     <nav className="navbar">
       <div className="navbar-brand">
         <Link
-          to={isAdmin ? "/admin/dashboard" : "/user/dashboard"}
+          to={showManagerArea ? "/admin/dashboard" : "/user/dashboard"}
           style={{ textDecoration: "none", color: "inherit" }}
         >
-          TaskManager
+          Octasence Tasks
         </Link>
       </div>
 
       <div className="navbar-menu">
-        {isAdmin ? (
+        {showManagerArea ? (
           <>
-            <Link to="/admin/dashboard" className="navbar-link">
-              <LayoutDashboard size={18} style={{ display: "inline", marginRight: "0.25rem" }} />
-              Dashboard
-            </Link>
-            <Link to="/admin/create-task" className="navbar-link">
-              <PlusCircle size={18} style={{ display: "inline", marginRight: "0.25rem" }} />
-              Create Task
-            </Link>
-            <Link to="/admin/manage-tasks" className="navbar-link">
-              <ListTodo size={18} style={{ display: "inline", marginRight: "0.25rem" }} />
-              Manage Tasks
-            </Link>
-            <Link to="/admin/manage-users" className="navbar-link">
-              <Users size={18} style={{ display: "inline", marginRight: "0.25rem" }} />
-              Manage Users
-            </Link>
+            {canManageTasks && (
+              <>
+                <Link to="/admin/dashboard" className="navbar-link">
+                  <LayoutDashboard size={18} style={{ display: "inline", marginRight: "0.25rem" }} />
+                  Dashboard
+                </Link>
+                <Link to="/tasks/create" className="navbar-link">
+                  <PlusCircle size={18} style={{ display: "inline", marginRight: "0.25rem" }} />
+                  Create Task
+                </Link>
+                <Link to="/admin/manage-tasks" className="navbar-link">
+                  <ListTodo size={18} style={{ display: "inline", marginRight: "0.25rem" }} />
+                  Task Board
+                </Link>
+                <Link to="/chats" className="navbar-link">
+                  <MessageSquare size={18} style={{ display: "inline", marginRight: "0.25rem" }} />
+                  Chats
+                </Link>
+              </>
+            )}
+            {(canManageUsers || canManageGroups) && (
+              <Link to="/admin/manage-users" className="navbar-link">
+                <Users size={18} style={{ display: "inline", marginRight: "0.25rem" }} />
+                People & Groups
+              </Link>
+            )}
           </>
         ) : (
           <>
@@ -68,6 +80,20 @@ const Navbar = () => {
               <ListTodo size={18} style={{ display: "inline", marginRight: "0.25rem" }} />
               My Tasks
             </Link>
+            <Link to="/tasks/create" className="navbar-link">
+              <PlusCircle size={18} style={{ display: "inline", marginRight: "0.25rem" }} />
+              Add Task
+            </Link>
+            <Link to="/chats" className="navbar-link">
+              <MessageSquare size={18} style={{ display: "inline", marginRight: "0.25rem" }} />
+              Chats
+            </Link>
+            {user?.groups?.[0]?._id && (
+              <Link to={`/admin/groups/${user.groups[0]._id}`} className="navbar-link">
+                <Layers3 size={18} style={{ display: "inline", marginRight: "0.25rem" }} />
+                My Groups
+              </Link>
+            )}
           </>
         )}
 
@@ -145,10 +171,13 @@ const Navbar = () => {
                 <p style={{ fontSize: "0.75rem", color: "var(--text-light)" }}>
                   {user?.email}
                 </p>
+                <p style={{ fontSize: "0.75rem", color: "var(--text-light)", marginTop: "0.25rem" }}>
+                  {user?.role === "founder" ? user?.founderTitle || "Founder" : user?.jobTitle || user?.role}
+                </p>
               </div>
 
               <Link
-                to={isAdmin ? "/admin/profile" : "/user/profile"}
+                to={showManagerArea ? "/admin/profile" : "/user/profile"}
                 style={{
                   display: "flex",
                   alignItems: "center",

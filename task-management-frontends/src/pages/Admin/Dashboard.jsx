@@ -18,6 +18,10 @@ import {
   PieChart,
   Pie,
   Cell,
+  RadialBarChart,
+  RadialBar,
+  AreaChart,
+  Area,
 } from "recharts"
 import { formatDate } from "../../utils/helper"
 
@@ -51,7 +55,7 @@ const Dashboard = () => {
     )
   }
 
-  const { statistics, charts, recentTasks } = dashboardData || {}
+  const { statistics, charts, recentTasks, hierarchyUsers } = dashboardData || {}
 
   // Prepare data for charts
   const statusData = charts?.taskDistribution
@@ -70,6 +74,16 @@ const Dashboard = () => {
       ]
     : []
 
+  const progressBandData = charts?.progressBands || []
+  const checklistTotals = charts?.checklistTotals || {}
+  const checklistRadialData = [
+    {
+      name: "Checklist completion",
+      value: checklistTotals.checklistCompletionRate || 0,
+      fill: "#0f766e",
+    },
+  ]
+
   const COLORS = ["#f59e0b", "#3b82f6", "#10b981"]
 
   return (
@@ -77,11 +91,12 @@ const Dashboard = () => {
       <Navbar />
       <div className="container">
         <h1 style={{ fontSize: "2rem", fontWeight: "700", marginBottom: "2rem", color: "var(--text)" }}>
-          Admin Dashboard
+          Operations Dashboard
         </h1>
 
         {/* Statistics Cards */}
         <div className="dashboard-grid">
+          <StatCard title="My Rank" value={statistics?.myRank || "-"} icon={ListTodo} color="var(--text)" />
           <StatCard title="Total Tasks" value={statistics?.totalTasks || 0} icon={ListTodo} color="var(--primary)" />
           <StatCard title="Pending Tasks" value={statistics?.pendingTasks || 0} icon={Clock} color="var(--warning)" />
           <StatCard
@@ -96,6 +111,41 @@ const Dashboard = () => {
             icon={AlertCircle}
             color="var(--danger)"
           />
+          <StatCard
+            title="Checklist Done"
+            value={`${checklistTotals.checklistCompletionRate || 0}%`}
+            icon={CheckCircle2}
+            color="var(--success)"
+          />
+          <StatCard
+            title="Checklist Items"
+            value={`${checklistTotals.completedChecklistItems || 0}/${checklistTotals.totalChecklistItems || 0}`}
+            icon={ListTodo}
+            color="var(--secondary)"
+          />
+        </div>
+
+        <div className="card" style={{ marginBottom: "2rem" }}>
+          <h2 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem" }}>Team Overview</h2>
+          <p style={{ color: "var(--text-light)", marginBottom: "1rem" }}>
+            Keep track of teammates in your workspace, their roles, and their current level across the organization.
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1rem" }}>
+            {hierarchyUsers?.length ? (
+              hierarchyUsers.map((person) => (
+                <div key={person._id} style={{ border: "1px solid var(--border)", borderRadius: "14px", padding: "1rem" }}>
+                  <div style={{ fontWeight: "700" }}>{person.name}</div>
+                  <div style={{ color: "var(--text-light)", marginTop: "0.25rem" }}>{person.email}</div>
+                  <div style={{ marginTop: "0.65rem", display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                    <span className="badge badge-progress">Rank {person.rank}</span>
+                    <span className="badge badge-completed">{person.role}</span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p style={{ color: "var(--text-light)" }}>No additional teammates are available in this view right now.</p>
+            )}
+          </div>
         </div>
 
         {/* Charts */}
@@ -145,6 +195,59 @@ const Dashboard = () => {
               </BarChart>
             </ResponsiveContainer>
           </div>
+
+          <div className="card">
+            <h2 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "0.35rem" }}>Checklist Completion</h2>
+            <p style={{ color: "var(--text-light)", marginBottom: "1rem" }}>
+              Completion is calculated from checklist items across visible tasks.
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: "1rem", alignItems: "center" }}>
+              <ResponsiveContainer width="100%" height={240}>
+                <RadialBarChart
+                  innerRadius="70%"
+                  outerRadius="100%"
+                  data={checklistRadialData}
+                  startAngle={90}
+                  endAngle={-270}
+                  barSize={18}
+                >
+                  <RadialBar background clockWise dataKey="value" cornerRadius={9999} />
+                  <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" style={{ fill: "#0f172a", fontSize: "1.6rem", fontWeight: 700 }}>
+                    {`${checklistTotals.checklistCompletionRate || 0}%`}
+                  </text>
+                </RadialBarChart>
+              </ResponsiveContainer>
+              <div style={{ display: "grid", gap: "0.9rem" }}>
+                <div style={{ padding: "1rem", borderRadius: "16px", background: "rgba(15,118,110,0.08)" }}>
+                  <div style={{ color: "var(--text-light)", fontSize: "0.85rem" }}>Completed items</div>
+                  <div style={{ fontSize: "1.6rem", fontWeight: 700, marginTop: "0.25rem" }}>{checklistTotals.completedChecklistItems || 0}</div>
+                </div>
+                <div style={{ padding: "1rem", borderRadius: "16px", background: "rgba(59,130,246,0.08)" }}>
+                  <div style={{ color: "var(--text-light)", fontSize: "0.85rem" }}>Remaining items</div>
+                  <div style={{ fontSize: "1.6rem", fontWeight: 700, marginTop: "0.25rem" }}>{checklistTotals.remainingChecklistItems || 0}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="card">
+            <h2 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem" }}>Task Progress Bands</h2>
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={progressBandData}>
+                <defs>
+                  <linearGradient id="progressBandsFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.7} />
+                    <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0.08} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="name" />
+                <YAxis allowDecimals={false} />
+                <Tooltip />
+                <Area type="monotone" dataKey="value" stroke="#0284c7" fill="url(#progressBandsFill)" strokeWidth={3} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
         {/* Recent Tasks */}
@@ -158,6 +261,7 @@ const Dashboard = () => {
                   <th>Status</th>
                   <th>Priority</th>
                   <th>Due Date</th>
+                  <th>Progress</th>
                   <th>Created</th>
                 </tr>
               </thead>
@@ -175,12 +279,13 @@ const Dashboard = () => {
                         <span className={`badge badge-${task.priority.toLowerCase()}`}>{task.priority}</span>
                       </td>
                       <td>{formatDate(task.dueDate)}</td>
+                      <td>{task.progress || 0}%</td>
                       <td>{formatDate(task.createdAt)}</td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="5" style={{ textAlign: "center" }}>
+                    <td colSpan="6" style={{ textAlign: "center" }}>
                       No tasks found
                     </td>
                   </tr>

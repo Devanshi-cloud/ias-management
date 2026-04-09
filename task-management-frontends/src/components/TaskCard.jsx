@@ -1,17 +1,19 @@
 "use client"
 import { useNavigate } from "react-router-dom"
 import { Calendar, Users, CheckCircle2 } from "lucide-react"
-import { formatDate, getPriorityColor, getStatusColor, isOverdue } from "../utils/helper"
+import { formatDate, formatDateTime, getPriorityColor, getStatusColor, isOverdue } from "../utils/helper"
+import { useAuth } from "../context/auth-context"
 
 const TaskCard = ({ task, onClick }) => {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const overdue = isOverdue(task.dueDate, task.status)
 
   const handleClick = () => {
     if (onClick) {
       onClick(task)
     } else {
-      navigate(`/user/task/${task._id}`)
+      navigate(user?.role === "admin" ? `/admin/task/${task._id}` : `/user/task/${task._id}`)
     }
   }
 
@@ -120,6 +122,10 @@ const TaskCard = ({ task, onClick }) => {
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
           <Calendar size={16} />
           <span>{formatDate(task.dueDate)}</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <CheckCircle2 size={16} />
+          <span>Assigned {formatDateTime(task.assignedAt || task.createdAt)}</span>
         </div>
         {task.assignedTo && (
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>

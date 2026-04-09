@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { Send } from "lucide-react"
 import axiosInstance from "../utils/axiosInstance"
 import { API_PATHS } from "../utils/apiPaths"
-import { useAuth } from "../context/AuthContext"
+import { useAuth } from "../context/auth-context"
 
 const TaskChat = ({ taskId }) => {
   const { user } = useAuth()
@@ -57,13 +57,20 @@ const TaskChat = ({ taskId }) => {
       date.toLocaleDateString([], { month: "short", day: "numeric" })
   }
 
+  const availabilityText = (sender) => {
+    const status = sender?.availabilityStatus || "available"
+    const label = status === "on_leave" ? "On leave" : status.charAt(0).toUpperCase() + status.slice(1)
+    return `${sender?.isOnline ? "Online" : "Offline"} · ${label}${sender?.statusMessage ? ` · ${sender.statusMessage}` : ""}`
+  }
+
   return (
     <div
       style={{
         marginTop: "2rem",
         border: "1px solid var(--border)",
-        borderRadius: "0.5rem",
+        borderRadius: "1rem",
         overflow: "hidden",
+        boxShadow: "0 10px 24px rgb(15 23 42 / 0.06)",
       }}
     >
       {/* Header */}
@@ -71,7 +78,7 @@ const TaskChat = ({ taskId }) => {
         style={{
           padding: "1rem 1.25rem",
           borderBottom: "1px solid var(--border)",
-          backgroundColor: "var(--background)",
+          backgroundColor: "#f0f2f5",
           fontWeight: "600",
           fontSize: "1rem",
         }}
@@ -81,14 +88,14 @@ const TaskChat = ({ taskId }) => {
 
       {/* Messages */}
       <div
+        className="chat-thread"
         style={{
           height: "320px",
           overflowY: "auto",
-          padding: "1rem",
+          padding: "1rem 1rem 0.9rem",
           display: "flex",
           flexDirection: "column",
-          gap: "0.75rem",
-          backgroundColor: "white",
+          gap: "0.5rem",
         }}
       >
         {loading ? (
@@ -103,81 +110,37 @@ const TaskChat = ({ taskId }) => {
             return (
               <div
                 key={msg._id}
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: isOwn ? "flex-end" : "flex-start",
-                }}
+                className={`chat-message-row ${isOwn ? "own" : "other"}`}
               >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.4rem",
-                    marginBottom: "0.25rem",
-                    flexDirection: isOwn ? "row-reverse" : "row",
-                  }}
-                >
-                  {msg.sender.profileImageUrl ? (
-                    <img
-                      src={msg.sender.profileImageUrl}
-                      alt={msg.sender.name}
-                      style={{ width: "24px", height: "24px", borderRadius: "50%", objectFit: "cover" }}
-                    />
-                  ) : (
-                    <div
-                      style={{
-                        width: "24px",
-                        height: "24px",
-                        borderRadius: "50%",
-                        backgroundColor: "var(--primary)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "white",
-                        fontSize: "0.7rem",
-                        fontWeight: "600",
-                        flexShrink: 0,
-                      }}
-                    >
-                      {msg.sender.name.charAt(0).toUpperCase()}
+                <div className={`chat-bubble ${isOwn ? "outgoing" : "incoming"}`}>
+                  {!isOwn && (
+                    <div className="chat-bubble-title" style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
+                      <span>{msg.sender.name}</span>
+                      {msg.sender.role === "admin" && (
+                        <span
+                          style={{
+                            fontSize: "0.63rem",
+                            backgroundColor: "var(--primary)",
+                            color: "white",
+                            padding: "0.1rem 0.35rem",
+                            borderRadius: "9999px",
+                          }}
+                        >
+                          Admin
+                        </span>
+                      )}
                     </div>
                   )}
-                  <span style={{ fontSize: "0.75rem", color: "var(--text-light)", fontWeight: "500" }}>
-                    {isOwn ? "You" : msg.sender.name}
-                    {msg.sender.role === "admin" && (
-                      <span
-                        style={{
-                          marginLeft: "0.3rem",
-                          fontSize: "0.65rem",
-                          backgroundColor: "var(--primary)",
-                          color: "white",
-                          padding: "0.1rem 0.3rem",
-                          borderRadius: "0.2rem",
-                        }}
-                      >
-                        Admin
-                      </span>
-                    )}
-                  </span>
+                  {!isOwn && (
+                    <div style={{ fontSize: "0.68rem", color: "var(--text-light)", marginBottom: "0.3rem" }}>
+                      {availabilityText(msg.sender)}
+                    </div>
+                  )}
+                  <div>{msg.text}</div>
+                  <div className="chat-bubble-meta">
+                    <span>{formatTime(msg.createdAt)}</span>
+                  </div>
                 </div>
-                <div
-                  style={{
-                    maxWidth: "70%",
-                    padding: "0.6rem 0.875rem",
-                    borderRadius: isOwn ? "1rem 1rem 0.25rem 1rem" : "1rem 1rem 1rem 0.25rem",
-                    backgroundColor: isOwn ? "var(--primary)" : "var(--background)",
-                    color: isOwn ? "white" : "var(--text)",
-                    fontSize: "0.875rem",
-                    lineHeight: "1.5",
-                    wordBreak: "break-word",
-                  }}
-                >
-                  {msg.text}
-                </div>
-                <span style={{ fontSize: "0.7rem", color: "var(--text-light)", marginTop: "0.2rem" }}>
-                  {formatTime(msg.createdAt)}
-                </span>
               </div>
             )
           })
@@ -188,13 +151,7 @@ const TaskChat = ({ taskId }) => {
       {/* Input */}
       <form
         onSubmit={handleSend}
-        style={{
-          display: "flex",
-          gap: "0.5rem",
-          padding: "0.75rem 1rem",
-          borderTop: "1px solid var(--border)",
-          backgroundColor: "var(--background)",
-        }}
+        className="chat-composer"
       >
         <input
           type="text"
@@ -209,7 +166,7 @@ const TaskChat = ({ taskId }) => {
           type="submit"
           className="btn btn-primary"
           disabled={!text.trim() || sending}
-          style={{ display: "flex", alignItems: "center", gap: "0.4rem", padding: "0.5rem 1rem" }}
+          style={{ display: "flex", alignItems: "center", gap: "0.4rem", padding: "0.8rem 1.1rem", borderRadius: "9999px" }}
         >
           <Send size={16} />
           Send

@@ -6,7 +6,7 @@ import Navbar from "../../components/Navbar"
 import axiosInstance from "../../utils/axiosInstance"
 import { API_PATHS } from "../../utils/apiPaths"
 import { ArrowLeft, Calendar, User, CheckCircle2, Circle, Users as UsersIcon } from "lucide-react"
-import { formatDate, getPriorityColor, isOverdue } from "../../utils/helper"
+import { formatDate, formatDateTime, getPriorityColor, isOverdue } from "../../utils/helper"
 import { statusOptions } from "../../utils/data"
 import TaskChat from "../../components/TaskChat"
 
@@ -16,6 +16,7 @@ const ViewTaskDetail = () => {
   const [task, setTask] = useState(null)
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState(false)
+  const [error, setError] = useState("")
 
   useEffect(() => {
     fetchTask()
@@ -23,10 +24,13 @@ const ViewTaskDetail = () => {
 
   const fetchTask = async () => {
     try {
+      setError("")
       const response = await axiosInstance.get(API_PATHS.GET_TASK_BY_ID(id))
       setTask(response.data)
     } catch (error) {
       console.error("Error fetching task:", error)
+      setTask(null)
+      setError(error.response?.data?.message || "Unable to load task")
     } finally {
       setLoading(false)
     }
@@ -79,7 +83,7 @@ const ViewTaskDetail = () => {
       <>
         <Navbar />
         <div className="container">
-          <p>Task not found</p>
+          <p>{error || "Task not found"}</p>
         </div>
       </>
     )
@@ -167,6 +171,14 @@ const ViewTaskDetail = () => {
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                 <Calendar size={16} />
                 <span>{formatDate(task.dueDate)}</span>
+              </div>
+            </div>
+
+            <div>
+              <h4 style={{ fontSize: "0.875rem", color: "var(--text-light)", marginBottom: "0.5rem" }}>Assigned On</h4>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <Calendar size={16} />
+                <span>{formatDateTime(task.assignedAt || task.createdAt)}</span>
               </div>
             </div>
 
