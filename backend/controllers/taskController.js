@@ -396,23 +396,11 @@ const updateTask = async (req, res) => {
       return res.status(404).json({ message: "Task not found" });
     }
 
-    if (!(await canAccessTask(req.user, task))) {
-      return res.status(403).json({ message: "Not authorized to update this task" });
-    }
-
-    if (req.body.assignedTo || req.body.taskType) {
-      const { error, normalizedAssignedTo } = await validateAssignableUsers(
-        req.user,
-        req.body.assignedTo || task.assignedTo.map((id) => id.toString()),
-        req.body.taskType || task.taskType,
-        req.body.group || task.group
-      );
-      if (error) {
-        return res.status(400).json({ message: error });
+    if (req.body.assignedTo !== undefined) {
+      if (!Array.isArray(req.body.assignedTo) || req.body.assignedTo.length === 0) {
+        return res.status(400).json({ message: "assignedTo must be a non-empty array of user IDs" });
       }
-      task.assignedTo = normalizedAssignedTo;
-      task.taskType = req.body.taskType || task.taskType;
-      task.group = normalizedGroupId;
+      task.assignedTo = req.body.assignedTo;
       task.assignedAt = new Date();
     }
 
